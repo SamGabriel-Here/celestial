@@ -79,7 +79,6 @@ const UI = {
   leaf: `<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>`,
   refresh: `<polyline points="21 3.5 21 9.5 15 9.5"/><polyline points="3 20.5 3 14.5 9 14.5"/><path d="M18.5 9.5A7.5 7.5 0 0 0 5.6 6.6L3 9.5m18 5l-2.6 2.9A7.5 7.5 0 0 1 5.5 14.5"/>`,
   alert: `<path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13.5"/><line x1="12" y1="17.2" x2="12.01" y2="17.2"/>`,
-  compassRose: `<circle cx="12" cy="12" r="9.5"/><polygon points="16.2 7.8 13.8 13.8 7.8 16.2 10.2 10.2"/>`,
   chevronLeft: `<polyline points="15 5 8 12 15 19"/>`,
   chevronRight: `<polyline points="9 5 16 12 9 19"/>`,
   close: `<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>`,
@@ -137,6 +136,26 @@ function svg(body, { size, className, title }) {
 }
 
 const escapeAttr = (text) => String(text).replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
+/**
+ * The Celestial brand mark. Unlike the glyphs above it mixes fill and stroke,
+ * so it gets its own builder rather than going through `svg()`. The cloud and
+ * arc inherit `currentColor`; the star picks up `--sun` via `.ic-sun`.
+ */
+export function brandMark({ size = 24, title = 'Celestial' } = {}) {
+  return `<svg class="icon icon--brand" width="${size}" height="${size}" viewBox="0 0 64 64"
+    fill="none" role="img" aria-label="${escapeAttr(title)}">
+    <path d="M32 9 A17 17 0 1 1 16.02 20.19" stroke="currentColor" stroke-width="4.4" stroke-linecap="round"/>
+    <path class="ic-sun" fill="currentColor"
+      d="M22.2 6.1 Q23.1 11.2 28.2 12.1 Q23.1 13 22.2 18.1 Q21.3 13 16.2 12.1 Q21.3 11.2 22.2 6.1 Z"/>
+    <g fill="currentColor">
+      <circle cx="17" cy="44" r="9.5"/>
+      <circle cx="32" cy="40" r="12.5"/>
+      <circle cx="45.4" cy="44.5" r="9"/>
+      <rect x="17" y="44" width="28.4" height="9.5"/>
+    </g>
+  </svg>`;
+}
 
 /** Weather glyph for an OpenWeather icon code. */
 export function weatherIcon(code, { size = 48, title = '' } = {}) {

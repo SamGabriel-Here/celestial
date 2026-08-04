@@ -128,8 +128,13 @@ async function useMyLocation() {
 const isAbort = (error) => error?.name === 'AbortError';
 
 function handleError(error) {
+  // Both of these are fixed by supplying a key, so send people to the key form.
   if (error instanceof ApiError && error.code === 'no-key') {
-    ui.setState('setup');
+    ui.showSetup('missing');
+    return;
+  }
+  if (error instanceof ApiError && error.code === 'auth') {
+    ui.showSetup('rejected');
     return;
   }
   const message =
@@ -252,7 +257,8 @@ function init() {
   ui.renderRecent(state.recent, null);
   bindEvents();
 
-  ui.setState(hasApiKey() ? 'empty' : 'setup');
+  if (hasApiKey()) ui.setState('empty');
+  else ui.showSetup('missing');
 
   setInterval(() => state.model && ui.renderStamp(state.model.fetchedAt), STAMP_TICK_MS);
   setInterval(() => {

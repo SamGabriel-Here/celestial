@@ -8,7 +8,10 @@
   <title>Celestial · Weather Dashboard</title>
   <link rel="preconnect" href="https://api.openweathermap.org" />
   <link rel="stylesheet" href="css/styles.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='19' font-size='19'>🌤️</text></svg>" />
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <link rel="apple-touch-icon" href="assets/celestial-app-icon.svg" />
+  <meta name="theme-color" content="#1478c8" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#080b11" media="(prefers-color-scheme: dark)" />
 </head>
 <body>
   <a class="skip-link" href="#dashboard">Skip to weather</a>
@@ -107,7 +110,7 @@
       <section class="panel panel--setup" id="panel-setup" aria-labelledby="setup-title">
         <span class="panel__art" id="setup-art" aria-hidden="true"></span>
         <h2 class="panel__title" id="setup-title">Add an OpenWeather API key</h2>
-        <p class="panel__body">
+        <p class="panel__body" id="setup-body">
           Celestial needs a free OpenWeather key. Put it in
           <code>js/config.js</code> for good, or paste one below to use for this session only —
           it is kept in memory and never saved.

@@ -9,11 +9,13 @@
 /* ---------- 1. Tokens & themes ------------------------------------------ */
 
 :root {
-  --accent: #6d5efc;
-  --accent-soft: rgba(109, 94, 252, 0.12);
-  --accent-line: rgba(109, 94, 252, 0.32);
+  /* Brand blue, matched to assets/celestial-mark.svg. The gold below is the
+     mark's star, doubling as the sun/daylight colour. */
+  --accent: #1478c8;
+  --accent-soft: rgba(20, 120, 200, 0.11);
+  --accent-line: rgba(20, 120, 200, 0.3);
   --accent-ink: #ffffff;
-  --sun: #f5a524;
+  --sun: #e8a11c;
 
   --bg: #f2f3f7;
   --surface: #ffffff;
@@ -39,8 +41,8 @@
   --poor: #dc2626;
   --severe: #9333ea;
 
-  --sky-a: rgba(109, 94, 252, 0.16);
-  --sky-b: rgba(245, 165, 36, 0.1);
+  --sky-a: rgba(20, 120, 200, 0.14);
+  --sky-b: rgba(232, 161, 28, 0.1);
 
   --ease: cubic-bezier(0.32, 0.72, 0, 1);
   --step: clamp(0.9rem, 0.6rem + 0.7vw, 1.15rem);
@@ -49,16 +51,16 @@
 }
 
 :root[data-theme='dark'] {
-  --accent: #8b7dff;
-  --accent-soft: rgba(139, 125, 255, 0.16);
-  --accent-line: rgba(139, 125, 255, 0.38);
-  --accent-ink: #0b0d14;
-  --sun: #fbbf4b;
+  --accent: #4fa6e8;
+  --accent-soft: rgba(79, 166, 232, 0.15);
+  --accent-line: rgba(79, 166, 232, 0.36);
+  --accent-ink: #07141f;
+  --sun: #fbc65a;
 
-  --bg: #0a0c12;
-  --surface: #141822;
-  --surface-2: #191e2a;
-  --surface-3: #202634;
+  --bg: #080b11;
+  --surface: #121722;
+  --surface-2: #171d29;
+  --surface-3: #1f2634;
   --border: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.16);
   --text: #edeff6;
@@ -80,11 +82,11 @@
 
 /* Weather-driven background wash. Kept subtle: it tints, never shouts. */
 .app[data-sky='clear-day']    { --sky-a: rgba(56, 152, 255, 0.20); --sky-b: rgba(255, 196, 84, 0.18); }
-.app[data-sky='clear-night']  { --sky-a: rgba(109, 94, 252, 0.22); --sky-b: rgba(24, 40, 120, 0.20); }
+.app[data-sky='clear-night']  { --sky-a: rgba(40, 90, 190, 0.24); --sky-b: rgba(16, 34, 96, 0.22); }
 .app[data-sky='clouds']       { --sky-a: rgba(120, 140, 180, 0.22); --sky-b: rgba(160, 175, 205, 0.14); }
 .app[data-sky='clouds-night'] { --sky-a: rgba(80, 96, 140, 0.26); --sky-b: rgba(48, 58, 96, 0.18); }
 .app[data-sky='rain']         { --sky-a: rgba(56, 116, 190, 0.24); --sky-b: rgba(70, 90, 140, 0.18); }
-.app[data-sky='storm']        { --sky-a: rgba(96, 78, 200, 0.26); --sky-b: rgba(250, 190, 70, 0.14); }
+.app[data-sky='storm']        { --sky-a: rgba(52, 70, 130, 0.28); --sky-b: rgba(250, 190, 70, 0.16); }
 .app[data-sky='snow']         { --sky-a: rgba(140, 180, 225, 0.24); --sky-b: rgba(210, 226, 245, 0.16); }
 .app[data-sky='mist']         { --sky-a: rgba(150, 158, 175, 0.22); --sky-b: rgba(190, 198, 214, 0.14); }
 
@@ -164,6 +166,7 @@ code {
 .icon { flex: none; }
 .icon--weather .ic-sun { color: var(--sun); stroke: var(--sun); }
 .icon--weather .ic-bolt { stroke: var(--sun); }
+.icon--brand .ic-sun { fill: var(--sun); }
 
 .app {
   position: relative;

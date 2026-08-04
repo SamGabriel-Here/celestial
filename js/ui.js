@@ -3,7 +3,7 @@
  * plus the active unit, and never call the network.
  * ========================================================================== */
 
-import { icon, weatherIcon, themeFromCode } from './icons.js';
+import { icon, weatherIcon, brandMark, themeFromCode } from './icons.js';
 import {
   temp, tempShort, degreeLabel, wind, visibility, compass,
   formatTime, formatHour, formatWeekday, formatDayMonth, formatFullDate,
@@ -27,6 +27,8 @@ export const els = {
   unitToggle: $('unit-toggle'),
   retryBtn: $('retry-btn'),
   setupForm: $('setup-form'),
+  setupTitle: $('setup-title'),
+  setupBody: $('setup-body'),
   keyInput: $('key-input'),
   // recent
   recent: $('recent'),
@@ -71,8 +73,17 @@ const escapeHtml = (value = '') =>
 
 /** Injects the SVGs that are part of the static markup. */
 export function mountStaticIcons() {
+  const brandHosts = [
+    ['brand-mark', 24],
+    ['empty-art', 32],
+    ['setup-art', 32],
+  ];
+  for (const [id, size] of brandHosts) {
+    const host = $(id);
+    if (host) host.innerHTML = brandMark({ size });
+  }
+
   const pairs = [
-    ['brand-mark', 'compassRose', 20],
     ['search-icon', 'search', 17],
     ['locate-glyph', 'pin', 16],
     ['refresh-glyph', 'refresh', 15],
@@ -81,9 +92,7 @@ export function mountStaticIcons() {
     ['sunrise-glyph', 'sunrise', 20],
     ['sunset-glyph', 'sunset', 20],
     ['air-glyph', 'leaf', 14],
-    ['empty-art', 'compassRose', 26],
     ['error-art', 'alert', 26],
-    ['setup-art', 'sun', 26],
   ];
   for (const [id, name, size] of pairs) {
     const host = $(id);
@@ -102,6 +111,32 @@ export function setBusy(busy) {
 
 export function announce(message) {
   els.live.textContent = message;
+}
+
+// Static, author-written copy — safe to assign as HTML.
+const SETUP_COPY = {
+  missing: {
+    title: 'Add an OpenWeather API key',
+    body: `Celestial needs a free OpenWeather key. Put it in <code>js/config.js</code> for good,
+           or paste one below to use for this session only — it is kept in memory and never saved.`,
+  },
+  rejected: {
+    title: 'That key was rejected',
+    body: `OpenWeather turned this key down. If you only just created it, give it ten minutes or so
+           to activate — that is far and away the usual cause. Otherwise paste a different key below.`,
+  },
+};
+
+/**
+ * A rejected key lands here rather than on the generic error panel: the fix is
+ * always "try another key", so put the input in front of the person.
+ */
+export function showSetup(reason = 'missing') {
+  const copy = SETUP_COPY[reason] ?? SETUP_COPY.missing;
+  els.setupTitle.textContent = copy.title;
+  els.setupBody.innerHTML = copy.body;
+  setState('setup');
+  if (reason === 'rejected') announce(copy.body);
 }
 
 export function showError(message) {
