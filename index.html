@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark light" />
+  <meta name="description" content="Celestial — a compact weather dashboard with current conditions, hourly and 5-day forecasts, air quality and daylight." />
+  <title>Celestial · Weather Dashboard</title>
+  <link rel="preconnect" href="https://api.openweathermap.org" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><text y='19' font-size='19'>🌤️</text></svg>" />
+</head>
+<body>
+  <a class="skip-link" href="#dashboard">Skip to weather</a>
+
+  <div class="app" id="app" data-state="empty" data-sky="clear-night">
+    <div class="app__glow" aria-hidden="true"></div>
+    <div class="progress" id="progress" aria-hidden="true"><span></span></div>
+
+    <!-- ================= Top bar ================= -->
+    <header class="topbar">
+      <div class="topbar__lead">
+        <p class="brand">
+          <span class="brand__mark" id="brand-mark" aria-hidden="true"></span>
+          <span class="brand__text">Celestial<span class="brand__sub">weather</span></span>
+        </p>
+
+        <div class="topbar__controls">
+          <fieldset class="segmented" id="unit-toggle">
+            <legend class="sr-only">Temperature units</legend>
+            <input type="radio" name="unit" id="unit-c" value="metric" checked />
+            <label for="unit-c">°C</label>
+            <input type="radio" name="unit" id="unit-f" value="imperial" />
+            <label for="unit-f">°F</label>
+          </fieldset>
+
+          <button type="button" class="icon-btn" id="theme-toggle" aria-pressed="true">
+            <span class="icon-btn__glyph" id="theme-glyph" aria-hidden="true"></span>
+            <span class="sr-only" id="theme-label">Switch to light theme</span>
+          </button>
+        </div>
+      </div>
+
+      <form class="search" id="search-form" role="search" novalidate>
+        <div class="search__field">
+          <span class="search__icon" id="search-icon" aria-hidden="true"></span>
+          <label class="sr-only" for="city-input">Search weather by city name</label>
+          <input
+            type="search"
+            id="city-input"
+            name="city"
+            class="search__input"
+            placeholder="Search a city — e.g. Lisbon, PT"
+            autocomplete="off"
+            autocapitalize="words"
+            spellcheck="false"
+            enterkeyhint="search"
+            aria-describedby="search-hint"
+          />
+        </div>
+        <p class="sr-only" id="search-hint">Type a city name and press Enter. Add a country code for precision.</p>
+        <button type="submit" class="btn btn--primary" id="search-btn">Search</button>
+        <button type="button" class="btn btn--ghost" id="locate-btn">
+          <span class="btn__glyph" id="locate-glyph" aria-hidden="true"></span>
+          <span class="btn__text">My location</span>
+        </button>
+      </form>
+
+      <section class="recent" id="recent" aria-labelledby="recent-title" hidden>
+        <h2 class="recent__title" id="recent-title">Recent searches</h2>
+        <ul class="chips" id="recent-list"></ul>
+        <button type="button" class="linkish" id="clear-recent">Clear</button>
+      </section>
+    </header>
+
+    <!-- ================= Main ================= -->
+    <main id="dashboard" class="main">
+      <p class="sr-only" id="live-region" role="status" aria-live="polite"></p>
+
+      <!-- Empty state -->
+      <section class="panel panel--empty" id="panel-empty" aria-labelledby="empty-title">
+        <span class="panel__art" id="empty-art" aria-hidden="true"></span>
+        <h2 class="panel__title" id="empty-title">Where are you looking?</h2>
+        <p class="panel__body">
+          Search for any city to see current conditions, an hourly outlook and the next five days —
+          or let Celestial detect where you are.
+        </p>
+        <div class="panel__actions">
+          <button type="button" class="btn btn--primary" data-action="locate">Use my location</button>
+          <button type="button" class="btn btn--ghost" data-action="focus-search">Search a city</button>
+        </div>
+        <ul class="chips chips--suggest" id="suggestions" aria-label="Suggested cities"></ul>
+      </section>
+
+      <!-- Error state -->
+      <section class="panel panel--error" id="panel-error" aria-labelledby="error-title" hidden>
+        <span class="panel__art panel__art--warn" id="error-art" aria-hidden="true"></span>
+        <h2 class="panel__title" id="error-title">Something went wrong</h2>
+        <p class="panel__body" id="error-message"></p>
+        <div class="panel__actions">
+          <button type="button" class="btn btn--primary" id="retry-btn">Try again</button>
+          <button type="button" class="btn btn--ghost" data-action="focus-search">Search a city</button>
+        </div>
+      </section>
+
+      <!-- API key setup state -->
+      <section class="panel panel--setup" id="panel-setup" aria-labelledby="setup-title" hidden>
+        <span class="panel__art" id="setup-art" aria-hidden="true"></span>
+        <h2 class="panel__title" id="setup-title">Add an OpenWeather API key</h2>
+        <p class="panel__body">
+          Celestial needs a free OpenWeather key. Put it in
+          <code>js/config.js</code> for good, or paste one below to use for this session only —
+          it is kept in memory and never saved.
+        </p>
+        <form class="setup-form" id="setup-form">
+          <label class="sr-only" for="key-input">OpenWeather API key</label>
+          <input type="text" id="key-input" class="search__input" placeholder="Paste your API key" autocomplete="off" spellcheck="false" />
+          <button type="submit" class="btn btn--primary">Use key</button>
+        </form>
+        <p class="panel__note">
+          Keys are free at <a href="https://openweathermap.org/api" target="_blank" rel="noopener noreferrer">openweathermap.org/api</a>
+          and take about ten minutes to activate.
+        </p>
+      </section>
+
+      <!-- ================= Dashboard grid ================= -->
+      <div class="dash" id="dash">
+
+        <!-- Current conditions -->
+        <section class="card card--hero" aria-labelledby="hero-place">
+          <div class="hero__head">
+            <div>
+              <h2 class="hero__place" id="hero-place">—</h2>
+              <p class="hero__date" id="hero-date">—</p>
+            </div>
+            <button type="button" class="icon-btn icon-btn--sm" id="refresh-btn">
+              <span class="icon-btn__glyph" id="refresh-glyph" aria-hidden="true"></span>
+              <span class="sr-only">Refresh weather</span>
+            </button>
+          </div>
+
+          <div class="hero__body">
+            <span class="hero__icon" id="hero-icon" aria-hidden="true"></span>
+            <p class="hero__temp">
+              <span id="hero-temp">—</span><span class="hero__unit" id="hero-unit">°C</span>
+            </p>
+            <div class="hero__meta">
+              <p class="hero__desc" id="hero-desc">—</p>
+              <p class="hero__sub" id="hero-sub"></p>
+            </div>
+          </div>
+
+          <p class="hero__stamp"><span id="hero-updated">—</span></p>
+        </section>
+
+        <!-- Metrics -->
+        <section class="card card--metrics" aria-labelledby="metrics-title">
+          <h2 class="card__title" id="metrics-title">Conditions</h2>
+          <ul class="metrics" id="metrics-grid"></ul>
+        </section>
+
+        <!-- Sun -->
+        <section class="card card--sun" aria-labelledby="sun-title">
+          <h2 class="card__title" id="sun-title">Sun</h2>
+          <div class="sun">
+            <svg class="sun__arc" viewBox="0 0 160 82" aria-hidden="true">
+              <path class="sun__track" d="M20 66 A60 60 0 0 1 140 66" />
+              <path class="sun__fill" id="sun-fill" d="M20 66 A60 60 0 0 1 140 66" />
+              <circle class="sun__dot" id="sun-dot" cx="20" cy="66" r="5" />
+              <line class="sun__ground" x1="8" y1="72" x2="152" y2="72" />
+            </svg>
+            <div class="sun__times">
+              <p class="sun__item">
+                <span class="sun__glyph" id="sunrise-glyph" aria-hidden="true"></span>
+                <span class="sun__label">Sunrise</span>
+                <span class="sun__value" id="sunrise-time">—</span>
+              </p>
+              <p class="sun__item">
+                <span class="sun__glyph" id="sunset-glyph" aria-hidden="true"></span>
+                <span class="sun__label">Sunset</span>
+                <span class="sun__value" id="sunset-time">—</span>
+              </p>
+            </div>
+            <p class="sun__note" id="sun-note">—</p>
+          </div>
+        </section>
+
+        <!-- Hourly -->
+        <section class="card card--hourly" aria-labelledby="hourly-title">
+          <div class="card__head">
+            <h2 class="card__title" id="hourly-title">Hourly outlook</h2>
+            <div class="scroller__nav">
+              <button type="button" class="icon-btn icon-btn--sm" id="hourly-prev">
+                <span class="icon-btn__glyph" id="hourly-prev-glyph" aria-hidden="true"></span>
+                <span class="sr-only">Scroll hourly forecast left</span>
+              </button>
+              <button type="button" class="icon-btn icon-btn--sm" id="hourly-next">
+                <span class="icon-btn__glyph" id="hourly-next-glyph" aria-hidden="true"></span>
+                <span class="sr-only">Scroll hourly forecast right</span>
+              </button>
+            </div>
+          </div>
+          <ul class="hourly" id="hourly-track" tabindex="0" aria-labelledby="hourly-title"></ul>
+        </section>
+
+        <!-- 5-day -->
+        <section class="card card--daily" aria-labelledby="daily-title">
+          <h2 class="card__title" id="daily-title">Next 5 days</h2>
+          <ul class="daily" id="daily-list"></ul>
+        </section>
+
+        <!-- Air quality -->
+        <section class="card card--air" id="air-card" aria-labelledby="air-title" hidden>
+          <h2 class="card__title" id="air-title">
+            <span class="card__title-glyph" id="air-glyph" aria-hidden="true"></span>Air quality
+          </h2>
+          <div class="aqi">
+            <p class="aqi__headline">
+              <span class="aqi__value" id="aqi-value">—</span>
+              <span class="aqi__label" id="aqi-label">—</span>
+            </p>
+            <div class="aqi__scale" role="img" id="aqi-scale" aria-label="Air quality index">
+              <span class="aqi__step" data-step="1"></span>
+              <span class="aqi__step" data-step="2"></span>
+              <span class="aqi__step" data-step="3"></span>
+              <span class="aqi__step" data-step="4"></span>
+              <span class="aqi__step" data-step="5"></span>
+            </div>
+            <p class="aqi__note" id="aqi-note"></p>
+            <ul class="aqi__components" id="aqi-components"></ul>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <p>
+        Data from <a href="https://openweathermap.org/" target="_blank" rel="noopener noreferrer">OpenWeather</a>.
+        Hourly steps are three hours apart on the free tier.
+      </p>
+    </footer>
+  </div>
+
+  <noscript>
+    <p style="padding:2rem;text-align:center">Celestial needs JavaScript enabled to fetch weather data.</p>
+  </noscript>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
