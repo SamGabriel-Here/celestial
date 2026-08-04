@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Celestial">
+  <title>Celestial</title>
+  <style>
+    .ring, .cloud { fill: none; stroke: #1478C8; }
+    .cloud { fill: #1478C8; stroke: none; }
+    .star { fill: #F2B231; }
+    @media (prefers-color-scheme: dark) {
+      .ring { stroke: #4FA6E8; }
+      .cloud { fill: #4FA6E8; }
+      .star { fill: #FBC65A; }
+    }
+  </style>
+
+  <!-- Orbital arc, open at the upper left where the star sits -->
+  <path class="ring" d="M32 9 A17 17 0 1 1 16.02 20.19" stroke-width="4.4" stroke-linecap="round"/>
+
+  <!-- Four-point star, centred on the arc's path -->
+  <path class="star" d="M22.2 6.1 Q23.1 11.2 28.2 12.1 Q23.1 13 22.2 18.1 Q21.3 13 16.2 12.1 Q21.3 11.2 22.2 6.1 Z"/>
+
+  <!-- Cloud: three tangent circles over a flat base, drawn last so it crops the arc -->
+  <g class="cloud">
+    <circle cx="17" cy="44" r="9.5"/>
+    <circle cx="32" cy="40" r="12.5"/>
+    <circle cx="45.4" cy="44.5" r="9"/>
+    <rect x="17" y="44" width="28.4" height="9.5"/>
+  </g>
+</svg>
