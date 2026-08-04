@@ -452,6 +452,7 @@ code {
 .setup-form {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 0.5rem;
   width: min(100%, 30rem);
   margin-top: 0.3rem;
