@@ -797,7 +797,8 @@ code {
 
 /* ---------- 8. States, motion, print ------------------------------------ */
 
-/* Only one panel — or the dashboard — is visible at a time. */
+/* Only one panel — or the dashboard — is visible at a time. Panel visibility is
+   driven entirely by `data-state`; do not add `hidden` to them as well. */
 .app[data-state='ready'] .dash { display: grid; }
 .app[data-state='loading'] .dash { display: grid; }
 .app:not([data-state='ready']):not([data-state='loading']) .dash { display: none; }
