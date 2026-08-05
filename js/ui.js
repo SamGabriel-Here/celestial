@@ -125,6 +125,17 @@ const SETUP_COPY = {
     body: `OpenWeather turned this key down. If you only just created it, give it ten minutes or so
            to activate — that is far and away the usual cause. Otherwise paste a different key below.`,
   },
+  unconfigured: {
+    title: 'The server has no key yet',
+    body: `Celestial is running in proxy mode, but <code>OPENWEATHER_API_KEY</code> is not set on the
+           server. Add it in your Vercel project settings and redeploy — or paste a key below to use
+           this browser session only.`,
+  },
+  missingProxy: {
+    title: 'No weather proxy here',
+    body: `This copy of Celestial expects a serverless function at <code>/api/weather</code>, and a
+           plain static server has none. Paste a key below to call OpenWeather directly instead.`,
+  },
 };
 
 /**

@@ -3,7 +3,7 @@
  * knows about both the network layer and the DOM layer.
  * ========================================================================== */
 
-import { hasApiKey, setSessionKey } from './config.js';
+import { canRequest, setSessionKey } from './config.js';
 import { ApiError, fetchWeatherBundle, geocodeCity, reverseGeocode, getCurrentPosition } from './api.js';
 import { buildDashboardModel } from './transform.js';
 import { UNITS, placeLabel } from './format.js';
@@ -128,13 +128,15 @@ async function useMyLocation() {
 const isAbort = (error) => error?.name === 'AbortError';
 
 function handleError(error) {
-  // Both of these are fixed by supplying a key, so send people to the key form.
-  if (error instanceof ApiError && error.code === 'no-key') {
-    ui.showSetup('missing');
-    return;
-  }
-  if (error instanceof ApiError && error.code === 'auth') {
-    ui.showSetup('rejected');
+  // Everything here is fixed by supplying a key, so send people to the key form.
+  const SETUP_REASONS = {
+    'no-key': 'missing',
+    auth: 'rejected',
+    'proxy-unconfigured': 'unconfigured',
+    'proxy-missing': 'missingProxy',
+  };
+  if (error instanceof ApiError && SETUP_REASONS[error.code]) {
+    ui.showSetup(SETUP_REASONS[error.code]);
     return;
   }
   const message =
@@ -257,7 +259,9 @@ function init() {
   ui.renderRecent(state.recent, null);
   bindEvents();
 
-  if (hasApiKey()) ui.setState('empty');
+  // In proxy mode we start optimistic: whether the server holds a key is only
+  // discoverable by asking it, so the first search surfaces any problem.
+  if (canRequest()) ui.setState('empty');
   else ui.showSetup('missing');
 
   setInterval(() => state.model && ui.renderStamp(state.model.fetchedAt), STAMP_TICK_MS);

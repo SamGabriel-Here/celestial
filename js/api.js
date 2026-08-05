@@ -4,7 +4,7 @@
  * transform.js.
  * ========================================================================== */
 
-import { CONFIG, getApiKey } from './config.js';
+import { CONFIG, getApiKey, usesProxy, canRequest } from './config.js';
 
 /** Error with a message that is safe (and useful) to show to a person. */
 export class ApiError extends Error {
@@ -16,29 +16,54 @@ export class ApiError extends Error {
   }
 }
 
-function buildUrl(base, path, params) {
-  const url = new URL(`${base}${path}`);
-  const search = { ...params, appid: getApiKey() };
-  for (const [key, value] of Object.entries(search)) {
+/**
+ * Builds the URL for a named resource in whichever mode is active. In proxy
+ * mode the key is omitted entirely — the serverless function adds it.
+ */
+function buildUrl(resource, params = {}) {
+  const key = getApiKey();
+  const url = key
+    ? new URL(CONFIG.endpoints[resource])
+    : new URL(CONFIG.proxyPath, window.location.origin);
+
+  if (!key) url.searchParams.set('resource', resource);
+
+  for (const [name, value] of Object.entries(params)) {
     if (value !== undefined && value !== null && value !== '') {
-      url.searchParams.set(key, String(value));
+      url.searchParams.set(name, String(value));
     }
   }
+
+  if (key) url.searchParams.set('appid', key);
   return url;
 }
 
-function describeStatus(status) {
+function describeStatus(status, viaProxy) {
   switch (status) {
     case 401:
       return new ApiError(
-        'That API key was rejected. Double-check it — brand new keys can take about 10 minutes to activate.',
+        viaProxy
+          ? 'The key stored on the server was rejected by OpenWeather. If it was created recently it may still be activating.'
+          : 'That API key was rejected. Double-check it — brand new keys can take about 10 minutes to activate.',
         { code: 'auth' }
       );
     case 404:
-      return new ApiError('We could not find weather data for that place.', { code: 'not-found' });
+      // In proxy mode a 404 means the function itself is absent — typical when
+      // the site is served from a plain static server rather than Vercel.
+      return viaProxy
+        ? new ApiError('No weather proxy is running at this address.', { code: 'proxy-missing' })
+        : new ApiError('We could not find weather data for that place.', { code: 'not-found' });
     case 429:
-      return new ApiError('Too many requests for this key right now. Wait a moment and try again.', {
+      return new ApiError('Too many requests right now. Wait a moment and try again.', {
         code: 'rate-limit',
+      });
+    case 503:
+      return new ApiError('The server has no OpenWeather key configured yet.', {
+        code: 'proxy-unconfigured',
+      });
+    case 502:
+      return new ApiError('The weather service could not be reached from the server.', {
+        code: 'upstream',
       });
     default:
       return new ApiError(`The weather service returned an error (${status}).`, { code: 'server' });
@@ -50,9 +75,10 @@ function describeStatus(status) {
  * signal, and turns every failure into an ApiError.
  */
 async function request(url, { signal } = {}) {
-  if (!getApiKey()) {
+  if (!canRequest()) {
     throw new ApiError('No API key configured.', { code: 'no-key' });
   }
+  const viaProxy = usesProxy();
 
   const controller = new AbortController();
   if (signal?.aborted) controller.abort(signal.reason);
@@ -62,7 +88,7 @@ async function request(url, { signal } = {}) {
 
   try {
     const response = await fetch(url, { signal: controller.signal });
-    if (!response.ok) throw describeStatus(response.status);
+    if (!response.ok) throw describeStatus(response.status, viaProxy);
     return await response.json();
   } catch (error) {
     if (error instanceof ApiError) throw error;
@@ -85,7 +111,7 @@ async function request(url, { signal } = {}) {
 
 /** City name -> up to `limit` candidate places. */
 export async function geocodeCity(query, { limit = 5, signal } = {}) {
-  const url = buildUrl(CONFIG.geoBase, '/direct', { q: query, limit });
+  const url = buildUrl('geocode', { q: query, limit });
   const results = await request(url, { signal });
   if (!Array.isArray(results) || results.length === 0) {
     throw new ApiError(`No place called “${query}” — check the spelling, or try "City, Country".`, {
@@ -97,7 +123,7 @@ export async function geocodeCity(query, { limit = 5, signal } = {}) {
 
 /** Coordinates -> a human-readable place. Falls back to the raw coordinates. */
 export async function reverseGeocode(lat, lon, { signal } = {}) {
-  const url = buildUrl(CONFIG.geoBase, '/reverse', { lat, lon, limit: 1 });
+  const url = buildUrl('reverse', { lat, lon, limit: 1 });
   try {
     const results = await request(url, { signal });
     if (Array.isArray(results) && results.length) return toPlace(results[0]);
@@ -121,19 +147,15 @@ function toPlace(raw) {
 /* --- Weather ----------------------------------------------------------- */
 
 export function fetchCurrent(lat, lon, { signal } = {}) {
-  return request(buildUrl(CONFIG.weatherBase, '/weather', { lat, lon, units: 'metric', lang: CONFIG.lang }), {
-    signal,
-  });
+  return request(buildUrl('current', { lat, lon, units: 'metric', lang: CONFIG.lang }), { signal });
 }
 
 export function fetchForecast(lat, lon, { signal } = {}) {
-  return request(buildUrl(CONFIG.weatherBase, '/forecast', { lat, lon, units: 'metric', lang: CONFIG.lang }), {
-    signal,
-  });
+  return request(buildUrl('forecast', { lat, lon, units: 'metric', lang: CONFIG.lang }), { signal });
 }
 
 export function fetchAirQuality(lat, lon, { signal } = {}) {
-  return request(buildUrl(CONFIG.weatherBase, '/air_pollution', { lat, lon }), { signal });
+  return request(buildUrl('air', { lat, lon }), { signal });
 }
 
 /**

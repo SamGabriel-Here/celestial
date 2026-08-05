@@ -3,32 +3,48 @@
 A compact weather dashboard — current conditions, an hourly outlook, five days ahead,
 daylight, and air quality. HTML, CSS and vanilla ES modules. No frameworks, no build step.
 
+## How the API key is handled
+
+The key never ships to the browser on the deployed site. Requests go to
+`/api/weather`, and the serverless function in `api/weather.js` attaches the key
+from an environment variable. That function is not an open proxy: it allowlists
+five upstream endpoints and six query parameters, and drops everything else.
+
+There are two modes, and Celestial picks whichever is available.
+
+**Proxy mode** — the default, and what production uses. Set
+`OPENWEATHER_API_KEY` in your Vercel project (Settings → Environment Variables),
+redeploy, and every visitor gets weather with nothing to configure.
+
+**Direct mode** — for local work off a plain static server. Put a key in
+`js/config.js`, or paste one into the app's setup panel. A key set either way is
+visible to anyone who views source, so don't ship one this way publicly. A key
+supplied for direct mode always overrides the proxy.
+
+Get a key free at [openweathermap.org/api](https://openweathermap.org/api). New
+keys take about ten minutes to activate.
+
 ## Run it
 
-1. **Get a key** — free at [openweathermap.org/api](https://openweathermap.org/api).
-   New keys take about ten minutes to activate.
-2. **Add it** — open `js/config.js` and replace the placeholder:
+With the serverless function, so you exercise what production runs:
 
-   ```js
-   apiKey: 'your-key-here',
-   ```
+```bash
+npx vercel dev
+```
 
-   You can also paste a key into the in-app setup panel; that one lives in memory
-   for the session only and is never written anywhere.
-3. **Serve the folder.** ES modules and the geolocation API both need `http://`,
-   not `file://`:
+Or as a pure static site — the app detects that no proxy is there and asks for a
+key. ES modules and geolocation both need `http://`, not `file://`:
 
-   ```bash
-   python3 -m http.server 4173 --directory .
-   ```
-
-   Then open <http://localhost:4173>.
+```bash
+python3 -m http.server 4180 --directory .
+```
 
 ## What's in it
 
 | File | Responsibility |
 | --- | --- |
-| `js/config.js` | API key, endpoints, tunables — the only file you need to edit |
+| `api/weather.js` | Serverless proxy; holds the key, allowlists upstreams and params |
+| `js/config.js` | Mode selection, endpoints, tunables — the only file you need to edit |
 | `js/api.js` | Every `fetch`; timeouts, aborts, and human-readable error mapping |
 | `js/transform.js` | Raw OpenWeather payloads → flat view models (pure functions) |
 | `js/format.js` | Units, timezone-aware dates, compass points, relative time |
@@ -41,11 +57,19 @@ Data flows one way: `api → transform → ui`. `ui.js` never fetches; `api.js` 
 
 ## Endpoints used
 
-- `/geo/1.0/direct` — city name → coordinates (better disambiguation than `?q=`)
-- `/geo/1.0/reverse` — coordinates → place name, for geolocation
-- `/data/2.5/weather` — current conditions
-- `/data/2.5/forecast` — 5 days in 3-hour steps, used for both hourly and daily
-- `/data/2.5/air_pollution` — air quality; optional, failure never blocks the page
+Named by the `resource` parameter the client sends to the proxy:
+
+| `resource` | Upstream | Purpose |
+| --- | --- | --- |
+| `geocode` | `/geo/1.0/direct` | city name → coordinates (better than `?q=`) |
+| `reverse` | `/geo/1.0/reverse` | coordinates → place name, for geolocation |
+| `current` | `/data/2.5/weather` | current conditions |
+| `forecast` | `/data/2.5/forecast` | 5 days in 3-hour steps; feeds hourly *and* daily |
+| `air` | `/data/2.5/air_pollution` | air quality; optional, never blocks the page |
+
+Successful proxy responses carry `s-maxage=600`, so Vercel's edge absorbs repeat
+traffic and one popular city doesn't cost a fresh OpenWeather call per visitor.
+Errors are never cached.
 
 Everything is requested in metric and converted on the client, so the °C/°F toggle
 re-renders without another request.
