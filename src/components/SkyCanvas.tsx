@@ -404,6 +404,7 @@ export function SkyCanvas({ sky }: { sky: Sky }) {
     let frame = 0;
     let last = performance.now();
     const tick = (now: number) => {
+      if (width === 0 || height === 0) resize();
       const dt = Math.min((now - last) / 1000, 0.05);
       last = now;
       approach(dt);
@@ -419,10 +420,7 @@ export function SkyCanvas({ sky }: { sky: Sky }) {
     };
 
     const start = (snap = false) => {
-      // A frame id is assigned even while hidden, where the callback never runs,
-      // so it is not on its own proof that anything is being painted.
-      if (frame && !document.hidden) return;
-      if (document.hidden) { paintNow(); return; }
+      if (frame) return;
       if (snap) snapNext = true;
       last = performance.now();
       frame = requestAnimationFrame(tick);
@@ -432,10 +430,11 @@ export function SkyCanvas({ sky }: { sky: Sky }) {
       frame = 0;
     };
     const onVisibility = () => {
-      if (document.hidden) { stop(); return; }
-      // Dimensions may have been unavailable while hidden, so re-measure first.
+      if (document.hidden) return;
+      // Dimensions are often unavailable while hidden, so re-measure on reveal.
       resize();
-      start(true);
+      snapNext = true;
+      start();
     };
 
     // While the loop is stopped the canvas would otherwise keep showing the old
@@ -448,8 +447,9 @@ export function SkyCanvas({ sky }: { sky: Sky }) {
     };
 
     resize();
-    // Always leave a real frame on the canvas before anything else: a tab opened
-    // in the background gets no rAF callbacks and would otherwise show black.
+    // Leave a real frame up front, then run continuously. `tick` re-measures if
+    // the canvas came up unmeasurable, so a page that mounted hidden or at zero
+    // recovers on its own rather than waiting for an event that may never come.
     paintNow();
     if (!reduced) start();
 
