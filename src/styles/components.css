@@ -209,7 +209,7 @@
 
 /* ---------- Chart -------------------------------------------------------- */
 
-.curve__wrap { overflow-x: auto; }
+.curve__wrap { overflow-x: auto; max-width: 100%; }
 .curve { width: 100%; min-width: 620px; height: 190px; }
 .curve__temp { fill: var(--ink); font-size: 12px; font-weight: 600; }
 .curve__hour { fill: var(--ink-3); font-size: 11px; }

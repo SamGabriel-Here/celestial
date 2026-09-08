@@ -23,6 +23,8 @@ export function SkyCanvas({ sky }: { sky: Sky }) {
   // The live target, read by the loop without re-subscribing.
   const target = useRef(sky);
   target.current = sky;
+  // Set by the render effect; lets a stopped canvas jump straight to the target.
+  const snapTo = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -43,6 +45,10 @@ export function SkyCanvas({ sky }: { sky: Sky }) {
     let shown = { ...sky };
     let flash = 0;
     let nextBolt = performance.now() + rand(2500, 7000);
+    // Set whenever the loop resumes after being stopped: the target may have
+    // moved on while we were idle, and easing from a stale sky would leave the
+    // chrome (which switches instantly) sitting on the wrong background.
+    let snapNext = false;
 
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
@@ -93,7 +99,8 @@ export function SkyCanvas({ sky }: { sky: Sky }) {
     /** Ease every visual quantity toward the target so transitions read as weather. */
     const approach = (dt: number) => {
       const t = target.current;
-      const k = reduced ? 1 : Math.min(1, dt * 1.6);
+      const k = reduced || snapNext ? 1 : Math.min(1, dt * 2.6);
+      snapNext = false;
       shown = {
         ...t,
         gradient: [0, 1, 2].map((i) =>
@@ -251,8 +258,19 @@ export function SkyCanvas({ sky }: { sky: Sky }) {
       frame = requestAnimationFrame(tick);
     };
 
-    const start = () => {
-      if (frame) return;
+    /** One synchronous snapped frame. Safe while hidden, when rAF never fires. */
+    const paintNow = () => {
+      snapNext = true;
+      approach(0);
+      paint(performance.now() / 1000, 0);
+    };
+
+    const start = (snap = false) => {
+      // A frame id is assigned even while hidden, where the callback never runs,
+      // so it is not on its own proof that anything is being painted.
+      if (frame && !document.hidden) return;
+      if (document.hidden) { paintNow(); return; }
+      if (snap) snapNext = true;
       last = performance.now();
       frame = requestAnimationFrame(tick);
     };
@@ -260,15 +278,22 @@ export function SkyCanvas({ sky }: { sky: Sky }) {
       cancelAnimationFrame(frame);
       frame = 0;
     };
-    const onVisibility = () => (document.hidden ? stop() : start());
+    const onVisibility = () => (document.hidden ? stop() : start(true));
+
+    // While the loop is stopped the canvas would otherwise keep showing the old
+    // city's sky. The chrome's light/dark switch is instant, so a stale sky means
+    // dark text on a dark background until the tab is looked at again. Painting a
+    // single snapped frame on demand keeps the two in agreement at all times.
+    snapTo.current = () => {
+      if (frame && !document.hidden) return;
+      paintNow();
+    };
 
     resize();
-    if (reduced) {
-      approach(1);
-      paint(0, 0);
-    } else {
-      start();
-    }
+    // Always leave a real frame on the canvas before anything else: a tab opened
+    // in the background gets no rAF callbacks and would otherwise show black.
+    paintNow();
+    if (!reduced) start();
 
     window.addEventListener('resize', resize);
     document.addEventListener('visibilitychange', onVisibility);
@@ -280,6 +305,10 @@ export function SkyCanvas({ sky }: { sky: Sky }) {
     // Deliberately mounts once: updates arrive through the `target` ref.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    snapTo.current?.();
+  }, [sky]);
 
   return <canvas ref={canvasRef} className="sky" aria-hidden="true" />;
 }

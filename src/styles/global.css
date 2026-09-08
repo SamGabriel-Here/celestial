@@ -63,6 +63,7 @@ a { color: inherit; }
   height: 100dvh;
   display: grid;
   grid-template-rows: auto 1fr;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .scroll {
@@ -80,9 +81,14 @@ a { color: inherit; }
   margin-inline: auto;
   padding-block: 1.25rem 2rem;
   display: grid;
+  /* minmax(0, 1fr), not the default `auto`: a grid track sized to `auto` takes
+     its minimum from the widest child's min-content, so the horizontal hourly
+     strip would drag the whole column past the viewport on a phone. */
+  grid-template-columns: minmax(0, 1fr);
   gap: clamp(0.85rem, 2vw, 1.15rem);
   animation: rise var(--slow) both;
 }
+.page > * { min-width: 0; }
 
 @keyframes rise {
   from { opacity: 0; transform: translateY(14px); }
@@ -181,7 +187,8 @@ a { color: inherit; }
 .muted { color: var(--ink-2); }
 .faint { color: var(--ink-3); }
 
-.grid { display: grid; gap: clamp(0.85rem, 2vw, 1.15rem); }
+.grid { display: grid; gap: clamp(0.85rem, 2vw, 1.15rem); grid-template-columns: minmax(0, 1fr); }
+.grid > * { min-width: 0; }
 @media (min-width: 780px) {
   .grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
