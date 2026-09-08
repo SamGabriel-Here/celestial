@@ -4,9 +4,8 @@
  * The browser never sees the OpenWeather key. It calls /api/weather?resource=…
  * and this function attaches the key server-side from an environment variable.
  *
- * CommonJS on purpose: there is no package.json, so Vercel's Node runtime treats
- * files here as CJS. The browser code in /js is ES modules — different runtime,
- * different rules.
+ * ES module, matching "type": "module" in package.json. It runs on Vercel's Node
+ * runtime, entirely separate from the Vite-built client bundle.
  * ========================================================================== */
 
 /** Only these upstreams can be reached. Not an open proxy. */
@@ -28,7 +27,7 @@ const json = (res, status, body) => {
   res.send(JSON.stringify(body));
 };
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return json(res, 405, { error: 'method-not-allowed' });
@@ -75,4 +74,4 @@ module.exports = async (req, res) => {
     upstreamResponse.ok ? 'public, s-maxage=600, stale-while-revalidate=1800' : 'no-store'
   );
   res.send(body);
-};
+}
