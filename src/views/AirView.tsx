@@ -1,5 +1,6 @@
 import { Meter, SectionHeading, Empty } from '../components/parts';
 import { SunArc } from '../components/SunArc';
+import { MoonDial } from '../components/MoonDial';
 import { useStore } from '../app/store';
 import { AQI_LEVELS, formatTime } from '../lib/format';
 
@@ -60,8 +61,13 @@ export function AirView() {
       </section>
 
       <section className="panel">
-        <SectionHeading title="Daylight" />
+        <SectionHeading title="Sun cycle" />
         <SunArc sunrise={current.sunrise} sunset={current.sunset} tz={current.tz} />
+      </section>
+
+      <section className="panel">
+        <SectionHeading title="Moon cycle" aside={<span className="faint">Tonight</span>} />
+        <MoonDial />
       </section>
     </div>
   );

@@ -286,3 +286,55 @@
   .brand em { display: none; }
   .field { grid-column: 1 / -1; grid-row: 2; max-width: none; }
 }
+
+/* ---------- Moon ---------------------------------------------------------- */
+
+.moon { display: grid; gap: 0.95rem; }
+
+.moon__head { display: flex; align-items: center; gap: 1rem; }
+.moon-face { flex: none; filter: drop-shadow(0 0 18px color-mix(in srgb, var(--gold) 32%, transparent)); }
+.moon-face__dark { fill: var(--ink); opacity: 0.12; }
+
+.moon__name { font-size: 1.15rem; font-weight: 600; letter-spacing: -0.02em; }
+.moon__lit { font-size: 0.9rem; margin-top: 0.1rem; }
+.moon__age { font-size: 0.78rem; margin-top: 0.15rem; }
+
+.moon__cycle { display: grid; gap: 0.35rem; }
+.moon__track {
+  position: relative;
+  height: 5px;
+  border-radius: 99px;
+  background: var(--edge);
+}
+.moon__fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 99px;
+  transform-origin: left center;
+  background: linear-gradient(90deg, var(--brand), var(--gold));
+  transition: transform var(--slow);
+}
+.moon__marker {
+  position: absolute;
+  top: 50%;
+  width: 11px;
+  height: 11px;
+  margin-left: -5.5px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: 2px solid var(--glass-2);
+  translate: 0 -50%;
+  transition: left var(--slow);
+}
+.moon__ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+}
+.moon__next { font-size: 0.8rem; }
+
+@media (max-width: 480px) {
+  .moon__head { gap: 0.75rem; }
+  .moon-face { width: 72px; height: 72px; }
+}

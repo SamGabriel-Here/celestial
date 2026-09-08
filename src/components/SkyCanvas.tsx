@@ -9,6 +9,7 @@
 
 import { useEffect, useRef } from 'react';
 import { mixHex, type Sky } from '../lib/sky';
+import { MARIA, moonAt, shadowOffset, type Moon } from '../lib/moon';
 
 interface Star { x: number; y: number; r: number; phase: number; speed: number }
 interface Cloud { x: number; y: number; scale: number; speed: number; alpha: number }
@@ -17,6 +18,9 @@ interface Drop { x: number; y: number; speed: number; drift: number; depth: numb
 interface Flake { x: number; y: number; r: number; speed: number; sway: number; phase: number }
 
 const MAX_DPR = 2;
+const TAU = Math.PI * 2;
+/** The moon is cached as a sprite; drawn at 2x so its limb stays crisp. */
+const SPRITE_SCALE = 2;
 const rand = (min: number, max: number) => min + Math.random() * (max - min);
 
 export function SkyCanvas({ sky }: { sky: Sky }) {
@@ -44,6 +48,8 @@ export function SkyCanvas({ sky }: { sky: Sky }) {
 
     // What is painted right now, eased toward `target` so changes feel like weather.
     let shown = { ...sky };
+    let moonSprite: { canvas: HTMLCanvasElement; size: number } | null = null;
+    let moonKey = '';
     let flash = 0;
     let nextBolt = performance.now() + rand(2500, 7000);
     // Set whenever the loop resumes after being stopped: the target may have
@@ -142,16 +148,11 @@ export function SkyCanvas({ sky }: { sky: Sky }) {
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, width, height);
 
-      // Sun or moon, as a soft bloom rather than a disc.
+      // The body itself, not just its light.
       const gx = s.glowAt[0] * width;
       const gy = s.glowAt[1] * height;
-      const radius = Math.max(width, height) * 0.42;
-      const glow = ctx.createRadialGradient(gx, gy, 0, gx, gy, radius);
-      glow.addColorStop(0, `${s.glow}${toHexAlpha(s.isNight ? 0.8 : 0.62)}`);
-      glow.addColorStop(0.18, `${s.glow}3d`);
-      glow.addColorStop(1, `${s.glow}00`);
-      ctx.fillStyle = glow;
-      ctx.fillRect(0, 0, width, height);
+      if (s.isNight) paintMoon(gx, gy, s);
+      else paintSun(gx, gy, s);
 
       if (s.stars > 1) {
         const density = Math.min(1, s.stars / 220);
@@ -223,6 +224,109 @@ export function SkyCanvas({ sky }: { sky: Sky }) {
       scrim.addColorStop(1, dark ? 'rgba(4,8,18,0.52)' : 'rgba(236,244,255,0.46)');
       ctx.fillStyle = scrim;
       ctx.fillRect(0, 0, width, height);
+    };
+
+    /** Sun: a wide bloom with a defined core, dimmed as cloud thickens over it. */
+    const paintSun = (cx: number, cy: number, s: Sky) => {
+      const bloom = Math.max(width, height) * 0.4;
+      const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, bloom);
+      glow.addColorStop(0, `${s.glow}${toHexAlpha(0.5)}`);
+      glow.addColorStop(0.13, `${s.glow}3a`);
+      glow.addColorStop(1, `${s.glow}00`);
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, width, height);
+
+      const clarity = Math.max(0, 1 - s.clouds / 6);
+      if (clarity < 0.04) return;
+      const r = Math.max(16, Math.min(width, height) * 0.034);
+      const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      core.addColorStop(0, `#fffdf2${toHexAlpha(0.95 * clarity)}`);
+      core.addColorStop(0.7, `${s.glow}${toHexAlpha(0.7 * clarity)}`);
+      core.addColorStop(1, `${s.glow}00`);
+      ctx.fillStyle = core;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, TAU);
+      ctx.fill();
+    };
+
+    /**
+     * Moon: a real disc carved to tonight's phase, with a halo that brightens
+     * as the moon fills. A new moon gives off almost nothing, which is correct.
+     */
+    const paintMoon = (cx: number, cy: number, s: Sky) => {
+      const r = Math.max(15, Math.min(width, height) * 0.04);
+      const moon = moonAt();
+      const clarity = Math.max(0.12, 1 - s.clouds / 8);
+      const brightness = (0.3 + moon.illumination * 0.7) * clarity;
+
+      const haloR = r * (4.5 + moon.illumination * 5);
+      const halo = ctx.createRadialGradient(cx, cy, r * 0.6, cx, cy, haloR);
+      halo.addColorStop(0, `${s.glow}${toHexAlpha(0.34 * brightness)}`);
+      halo.addColorStop(1, `${s.glow}00`);
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(cx, cy, haloR, 0, TAU);
+      ctx.fill();
+
+      const sprite = moonSpriteFor(r, moon, s.glow);
+      if (!sprite) return;
+      ctx.globalAlpha = clarity;
+      ctx.drawImage(sprite.canvas, cx - sprite.size / 2, cy - sprite.size / 2, sprite.size, sprite.size);
+      ctx.globalAlpha = 1;
+    };
+
+    /**
+     * The face is rebuilt only when size, phase or tint actually change — phase
+     * to three decimals is roughly every forty minutes, so this is a cache hit
+     * on essentially every frame.
+     */
+    const moonSpriteFor = (r: number, moon: Moon, tint: string) => {
+      const key = `${Math.round(r)}|${moon.phase.toFixed(3)}|${tint}`;
+      if (moonKey === key && moonSprite) return moonSprite;
+
+      const size = Math.ceil((r + 2) * 2);
+      const off = document.createElement('canvas');
+      off.width = off.height = size * SPRITE_SCALE;
+      const o = off.getContext('2d');
+      if (!o) return null;
+      o.scale(SPRITE_SCALE, SPRITE_SCALE);
+      const c = size / 2;
+
+      const face = o.createRadialGradient(c - r * 0.32, c - r * 0.32, r * 0.1, c, c, r);
+      face.addColorStop(0, '#ffffff');
+      face.addColorStop(1, tint);
+      o.fillStyle = face;
+      o.beginPath();
+      o.arc(c, c, r, 0, TAU);
+      o.fill();
+
+      o.save();
+      o.beginPath();
+      o.arc(c, c, r, 0, TAU);
+      o.clip();
+      for (const [mx, my, mr, alpha] of MARIA) {
+        const px = c + mx * r;
+        const py = c + my * r;
+        const mare = o.createRadialGradient(px, py, 0, px, py, mr * r);
+        mare.addColorStop(0, `rgba(92,106,138,${alpha})`);
+        mare.addColorStop(1, 'rgba(92,106,138,0)');
+        o.fillStyle = mare;
+        o.beginPath();
+        o.arc(px, py, mr * r, 0, TAU);
+        o.fill();
+      }
+      o.restore();
+
+      // Carve the phase by erasing with a same-sized disc slid across the face.
+      o.globalCompositeOperation = 'destination-out';
+      o.beginPath();
+      o.arc(c + shadowOffset(moon) * r, c, r * 1.004, 0, TAU);
+      o.fill();
+      o.globalCompositeOperation = 'source-over';
+
+      moonSprite = { canvas: off, size };
+      moonKey = key;
+      return moonSprite;
     };
 
     /**
