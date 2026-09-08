@@ -12,7 +12,8 @@ import { mixHex, type Sky } from '../lib/sky';
 
 interface Star { x: number; y: number; r: number; phase: number; speed: number }
 interface Cloud { x: number; y: number; scale: number; speed: number; alpha: number }
-interface Drop { x: number; y: number; len: number; speed: number; drift: number }
+/** `depth` runs 0 (far) to 1 (near) and drives speed, opacity and weight together. */
+interface Drop { x: number; y: number; speed: number; drift: number; depth: number }
 interface Flake { x: number; y: number; r: number; speed: number; sway: number; phase: number }
 
 const MAX_DPR = 2;
@@ -51,9 +52,18 @@ export function SkyCanvas({ sky }: { sky: Sky }) {
     let snapNext = false;
 
     const resize = () => {
+      // Measure the canvas's own box, not the window. A hidden or zero-laid-out
+      // window reports 0x0, and sizing to that leaves a zero-pixel bitmap that
+      // nothing can be drawn into — the canvas then stays black until some later
+      // window event happens to fire, which is not guaranteed. The ResizeObserver
+      // below re-runs this the moment the box becomes real.
+      const box = canvas.getBoundingClientRect();
+      const w = Math.round(box.width) || window.innerWidth;
+      const h = Math.round(box.height) || window.innerHeight;
+      if (w === 0 || h === 0) return;
       const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
-      width = window.innerWidth;
-      height = window.innerHeight;
+      width = w;
+      height = h;
       canvas.width = Math.floor(width * dpr);
       canvas.height = Math.floor(height * dpr);
       canvas.style.width = `${width}px`;
@@ -79,13 +89,16 @@ export function SkyCanvas({ sky }: { sky: Sky }) {
         speed: rand(3, 11) * (i % 2 ? 1 : 0.6),
         alpha: rand(0.35, 0.85),
       }));
-      drops = Array.from({ length: Math.round(420 * Math.max(area, 0.4)) }, () => ({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        len: rand(9, 26),
-        speed: rand(620, 1150),
-        drift: rand(40, 130),
-      }));
+      drops = Array.from({ length: Math.round(240 * Math.max(area, 0.4)) }, () => {
+        const depth = Math.random();
+        return {
+          x: Math.random() * width,
+          y: Math.random() * height,
+          depth,
+          speed: 230 + depth * 300,
+          drift: 12 + depth * 38,
+        };
+      });
       flakes = Array.from({ length: Math.round(220 * Math.max(area, 0.4)) }, () => ({
         x: Math.random() * width,
         y: Math.random() * height,
@@ -212,24 +225,60 @@ export function SkyCanvas({ sky }: { sky: Sky }) {
       ctx.fillRect(0, 0, width, height);
     };
 
+    /**
+     * Rain is drawn as three depth bands rather than one flat sheet: far drops are
+     * thin, slow and nearly transparent, near ones slightly heavier. Each band is
+     * a single stroke, so the whole effect costs three draw calls.
+     *
+     * Streak length is derived from how far a drop travels in one frame rather
+     * than being a fixed random value. If a streak is shorter than its per-frame
+     * step the drop lands in a visibly different place each frame and reads as
+     * strobing; keeping it a little longer than the step makes successive frames
+     * overlap, which is what actually looks like falling water.
+     */
+    const RAIN_BANDS = 3;
+    const FRAME = 1 / 60;
+
     const paintRain = (rate: number, dt: number, light: boolean) => {
       const count = Math.round(drops.length * rate);
-      ctx.strokeStyle = light ? 'rgba(198,216,240,0.45)' : 'rgba(205,222,245,0.62)';
-      ctx.lineWidth = light ? 0.9 : 1.25;
-      ctx.beginPath();
-      for (let i = 0; i < count; i++) {
-        const drop = drops[i]!;
-        if (!reduced) {
+
+      if (!reduced) {
+        for (let i = 0; i < count; i++) {
+          const drop = drops[i]!;
           drop.y += drop.speed * dt;
           drop.x += drop.drift * dt;
-          if (drop.y > height) { drop.y = -drop.len; drop.x = Math.random() * width; }
-          if (drop.x > width) drop.x = 0;
+          if (drop.y > height + 24) {
+            drop.y = -24;
+            drop.x = Math.random() * width;
+          }
+          if (drop.x > width) drop.x -= width;
+          else if (drop.x < 0) drop.x += width;
         }
-        const tilt = drop.drift / drop.speed;
-        ctx.moveTo(drop.x, drop.y);
-        ctx.lineTo(drop.x - drop.len * tilt, drop.y - drop.len);
       }
-      ctx.stroke();
+
+      ctx.lineCap = 'round';
+      for (let band = 0; band < RAIN_BANDS; band++) {
+        const lo = band / RAIN_BANDS;
+        const hi = (band + 1) / RAIN_BANDS;
+        const mid = (lo + hi) / 2;
+
+        ctx.strokeStyle = `rgba(216,232,252,${(
+          (light ? 0.045 : 0.07) + mid * (light ? 0.085 : 0.15)
+        ).toFixed(3)})`;
+        ctx.lineWidth = (light ? 0.45 : 0.55) + mid * (light ? 0.45 : 0.7);
+        ctx.beginPath();
+
+        for (let i = 0; i < count; i++) {
+          const drop = drops[i]!;
+          if (drop.depth < lo || drop.depth >= hi) continue;
+          const len = Math.min(20, Math.max(6, drop.speed * FRAME * 1.45));
+          const tilt = drop.drift / drop.speed;
+          ctx.moveTo(drop.x, drop.y);
+          ctx.lineTo(drop.x - len * tilt, drop.y - len);
+        }
+        ctx.stroke();
+      }
+      ctx.lineCap = 'butt';
     };
 
     const paintSnow = (rate: number, dt: number, time: number) => {
@@ -278,7 +327,12 @@ export function SkyCanvas({ sky }: { sky: Sky }) {
       cancelAnimationFrame(frame);
       frame = 0;
     };
-    const onVisibility = () => (document.hidden ? stop() : start(true));
+    const onVisibility = () => {
+      if (document.hidden) { stop(); return; }
+      // Dimensions may have been unavailable while hidden, so re-measure first.
+      resize();
+      start(true);
+    };
 
     // While the loop is stopped the canvas would otherwise keep showing the old
     // city's sky. The chrome's light/dark switch is instant, so a stale sky means
@@ -295,11 +349,18 @@ export function SkyCanvas({ sky }: { sky: Sky }) {
     paintNow();
     if (!reduced) start();
 
-    window.addEventListener('resize', resize);
+    // Observing the element covers every way the box can change — window resize,
+    // layout shifts, and the first moment it gains a size after mounting hidden.
+    const observer = new ResizeObserver(() => {
+      const before = `${width}x${height}`;
+      resize();
+      if (`${width}x${height}` !== before) paintNow();
+    });
+    observer.observe(canvas);
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
       stop();
-      window.removeEventListener('resize', resize);
+      observer.disconnect();
       document.removeEventListener('visibilitychange', onVisibility);
     };
     // Deliberately mounts once: updates arrive through the `target` ref.

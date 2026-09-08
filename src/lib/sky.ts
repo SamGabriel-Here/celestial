@@ -86,7 +86,9 @@ export function readSky(code: string, unixSeconds: number, tzOffset: number): Sk
 
   if (overcast) gradient = greyed(gradient, overcast);
   if (stormy) {
-    gradient = greyed(gradient, 0.5).map((c) => mixHex(c, '#2b3444', 0.45)) as [string, string, string];
+    // Deep enough that light chrome text keeps its contrast: a half-grey wash
+    // left the lower sky around mid-grey, which the dimmer type disappeared into.
+    gradient = greyed(gradient, 0.5).map((c) => mixHex(c, '#1b2331', 0.62)) as [string, string, string];
     scheme = 'dark';
   }
   if (snowy) {
