@@ -37,8 +37,19 @@
   font-weight: 200;
   line-height: 0.86;
   letter-spacing: -0.05em;
+  /* The tight tracking above also applies *after* the final digit, dragging the
+     unit back into it. This buys that space back. */
+  gap: 0.075em;
 }
-.hero__temp span { font-size: 0.26em; font-weight: 500; margin-top: 0.5em; color: var(--ink-3); }
+.hero__temp span {
+  font-size: 0.26em;
+  font-weight: 500;
+  margin-top: 0.5em;
+  color: var(--ink-3);
+  /* letter-spacing inherits as a computed length, so -0.05em of a 144px digit
+     lands as -7px on 37px text and jams the degree sign into the C. */
+  letter-spacing: 0.01em;
+}
 
 .hero__condition { font-size: 1.15rem; font-weight: 600; letter-spacing: -0.02em; }
 .hero__sub { font-size: 0.92rem; margin-top: 0.2rem; }
@@ -75,7 +86,7 @@
 .metric:hover { border-color: var(--edge-2); }
 .metric__top { display: flex; align-items: center; gap: 0.38rem; color: var(--brand); }
 .metric__value { display: block; font-size: 1.5rem; font-weight: 300; letter-spacing: -0.03em; margin-top: 0.3rem; }
-.metric__value i { font-style: normal; font-size: 0.52em; font-weight: 500; color: var(--ink-3); margin-left: 0.15em; }
+.metric__value i { font-style: normal; font-size: 0.52em; font-weight: 500; color: var(--ink-3); margin-left: 0.15em; letter-spacing: normal; }
 .metric__hint { display: block; font-size: 0.76rem; color: var(--ink-3); margin-top: 0.1rem; }
 
 /* ---------- Horizontal strip --------------------------------------------- */
@@ -193,7 +204,7 @@
 .pollutants { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.55rem; }
 .pollutants li { padding: 0.55rem 0.65rem; border-radius: var(--r-sm); background: var(--well); border: 1px solid var(--edge); display: grid; gap: 0.3rem; }
 .pollutants__value { font-size: 0.98rem; font-weight: 500; }
-.pollutants__value i { font-style: normal; font-size: 0.68em; color: var(--ink-3); }
+.pollutants__value i { font-style: normal; font-size: 0.68em; color: var(--ink-3); letter-spacing: normal; }
 
 /* ---------- Sun ---------------------------------------------------------- */
 
