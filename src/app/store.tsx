@@ -224,10 +224,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (retryRef.current) retryRef.current();
   }, []);
 
-  // Nothing to ask for until there is a key or a proxy to ask.
+  // Nothing to ask for until there is a key or a proxy to ask. Otherwise open on
+  // the city in ?q=, so a link to a place is shareable and survives a reload.
   useEffect(() => {
-    if (!canRequest()) dispatch({ type: 'setup', reason: 'missing' });
+    if (!canRequest()) {
+      dispatch({ type: 'setup', reason: 'missing' });
+      return;
+    }
+    const wanted = new URLSearchParams(window.location.search).get('q');
+    if (wanted) void search(wanted);
+    // Boot only: `search` is stable, and re-running would re-query on every change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Keep the address bar pointing at whatever is on screen, without adding
+  // history entries — the back button belongs to the view tabs.
+  useEffect(() => {
+    if (!state.place) return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('q') === state.place.name) return;
+    url.searchParams.set('q', state.place.name);
+    window.history.replaceState(null, '', url);
+  }, [state.place]);
 
   // Keep the reading fresh while the tab is open and visible.
   useEffect(() => {
