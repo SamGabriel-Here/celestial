@@ -58,25 +58,26 @@ export function SkyCanvas({ sky }: { sky: Sky }) {
     let snapNext = false;
 
     const resize = () => {
-      // Measure the canvas's own box, not the window. A hidden or zero-laid-out
-      // window reports 0x0, and sizing to that leaves a zero-pixel bitmap that
-      // nothing can be drawn into — the canvas then stays black until some later
-      // window event happens to fire, which is not guaranteed. The ResizeObserver
-      // below re-runs this the moment the box becomes real.
-      const box = canvas.getBoundingClientRect();
-      const w = Math.round(box.width) || window.innerWidth;
-      const h = Math.round(box.height) || window.innerHeight;
+      // Only the bitmap is set here. Writing an inline width/height would
+      // override the stylesheet's `inset: 0` sizing and pin the element's box,
+      // after which it can never change again — and a box that never changes is
+      // a ResizeObserver that never fires, leaving the sky stuck at whatever
+      // size it first saw. Let CSS own the box; measure what CSS produced.
+      const w = canvas.clientWidth || window.innerWidth;
+      const h = canvas.clientHeight || window.innerHeight;
       if (w === 0 || h === 0) return;
       const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
       width = w;
       height = h;
       canvas.width = Math.floor(width * dpr);
       canvas.height = Math.floor(height * dpr);
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       seed();
     };
+
+    /** True when the bitmap no longer matches the box CSS has given us. */
+    const stale = () =>
+      (canvas.clientWidth || 0) !== width || (canvas.clientHeight || 0) !== height;
 
     /** Particle fields are sized to the viewport, so reseed on resize. */
     const seed = () => {
@@ -404,7 +405,7 @@ export function SkyCanvas({ sky }: { sky: Sky }) {
     let frame = 0;
     let last = performance.now();
     const tick = (now: number) => {
-      if (width === 0 || height === 0) resize();
+      if (width === 0 || height === 0 || stale()) resize();
       const dt = Math.min((now - last) / 1000, 0.05);
       last = now;
       approach(dt);
@@ -461,10 +462,12 @@ export function SkyCanvas({ sky }: { sky: Sky }) {
       if (`${width}x${height}` !== before) paintNow();
     });
     observer.observe(canvas);
+    window.addEventListener('resize', resize);
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
       stop();
       observer.disconnect();
+      window.removeEventListener('resize', resize);
       document.removeEventListener('visibilitychange', onVisibility);
     };
     // Deliberately mounts once: updates arrive through the `target` ref.
