@@ -86,14 +86,17 @@ a { color: inherit; }
      strip would drag the whole column past the viewport on a phone. */
   grid-template-columns: minmax(0, 1fr);
   gap: clamp(0.85rem, 2vw, 1.15rem);
-  animation: rise var(--slow) both;
 }
 .page > * { min-width: 0; }
 
-@keyframes rise {
-  from { opacity: 0; transform: translateY(14px); }
-  to { opacity: 1; transform: none; }
+/* Views sit left to right in tab order, so a later tab arrives from the right.
+   Short on purpose: this is continuity, not a performance. */
+.view--enter .page { animation: view-in 260ms var(--ease-out) both; }
+@keyframes view-in {
+  from { opacity: 0; transform: translateX(calc(var(--dir, 0) * 22px)); }
 }
+
+@keyframes fade-in { from { opacity: 0; } }
 
 /* ---------- 3. Navigation ----------------------------------------------- */
 
@@ -123,8 +126,6 @@ a { color: inherit; }
   left: 50%;
   bottom: max(0.9rem, env(safe-area-inset-bottom));
   translate: -50% 0;
-  display: flex;
-  gap: 0.15rem;
   padding: 0.3rem;
   border-radius: var(--r-pill);
   background: var(--glass-2);
@@ -142,12 +143,11 @@ a { color: inherit; }
   border-radius: var(--r-pill);
   color: var(--ink-3);
   font-size: 0.82rem;
-  font-weight: 500;
-  transition: color var(--fast), background var(--fast);
+  font-weight: 600;
+  transition: color var(--fast);
   white-space: nowrap;
 }
 .tab:hover { color: var(--ink); }
-.tab[aria-current='page'] { color: var(--on-accent); background: var(--brand); font-weight: 600; }
 .tab span { display: none; }
 @media (min-width: 620px) { .tab span { display: inline; } }
 
@@ -239,10 +239,11 @@ a { color: inherit; }
   white-space: nowrap;
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-  transition: color var(--fast), border-color var(--fast), background var(--fast), transform var(--fast);
+  transition: color var(--fast), border-color var(--fast), background var(--fast), transform 120ms var(--ease-out);
 }
-.btn:hover { color: var(--ink); border-color: var(--edge-2); transform: translateY(-1px); }
-.btn:active { transform: none; }
+.btn:hover { color: var(--ink); border-color: var(--edge-2); }
+/* Press, don't float: the button acknowledges the action it received. */
+.btn:active { transform: scale(0.96); }
 .btn--primary { background: var(--brand); border-color: transparent; color: var(--on-accent); }
 .btn--primary:hover { color: var(--on-accent); filter: brightness(1.08); }
 .btn--icon { padding: 0.5rem; width: 36px; height: 36px; }
@@ -256,16 +257,38 @@ a { color: inherit; }
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
 }
-.seg button {
+.seg__item {
+  display: inline-flex;
+  align-items: center;
   padding: 0.3rem 0.72rem;
   border-radius: var(--r-pill);
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--ink-3);
-  transition: color var(--fast), background var(--fast);
+  transition: color var(--fast);
 }
-.seg button:hover { color: var(--ink); }
-.seg button[aria-pressed='true'] { background: var(--brand); color: var(--on-accent); }
+.seg__item:hover { color: var(--ink); }
+
+/* ---- Lens: the selection is a clipped copy of the row, not a background ---- */
+
+.lens-group { position: relative; display: flex; }
+.tabbar .lens-group { gap: 0.15rem; }
+
+.lens {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  gap: inherit;
+  pointer-events: none;
+  background: var(--brand);
+  clip-path: inset(50% 50% 50% 50% round 999px);
+}
+.lens > * { color: var(--on-accent); }
+.lens-group[data-ready] .lens { transition: clip-path 340ms var(--ease-out); }
+
+/* Before the first measure, and wherever script never runs, fall back to a plain fill. */
+.lens-group:not([data-measured]) > [aria-current='page'],
+.lens-group:not([data-measured]) > [aria-pressed='true'] { background: var(--brand); color: var(--on-accent); }
 
 .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; list-style: none; padding: 0; }
 .chip {
@@ -275,9 +298,10 @@ a { color: inherit; }
   background: var(--well);
   color: var(--ink-2);
   font-size: 0.8rem;
-  transition: color var(--fast), border-color var(--fast), background var(--fast);
+  transition: color var(--fast), border-color var(--fast), background var(--fast), transform 120ms var(--ease-out);
 }
 .chip:hover { color: var(--ink); border-color: var(--edge-2); }
+.chip:active { transform: scale(0.96); }
 .chip[aria-current='true'] { color: var(--on-accent); background: var(--brand); border-color: transparent; }
 
 /* Indeterminate bar shown while refreshing data that is already on screen. */
@@ -302,13 +326,29 @@ a { color: inherit; }
 
 /* ---------- 6. Motion, responsive, a11y ---------------------------------- */
 
+/* Reduced motion removes travel, not meaning. Anything that moved to explain a
+   change keeps the change and loses the journey; feedback stays legible. */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-  }
+  .view--enter .page,
+  .hero--rise > *,
+  .hero__temp--swap,
+  .state { animation: fade-in 160ms linear both; }
+
+  .sun--trace .sun__lit,
+  .sun--trace .sun__body,
+  .moon--trace .moon__fill,
+  .moon--trace .moon__rail { animation: none; }
+
+  .lens-group[data-ready] .lens,
+  .sun__lit, .sun__body, .moon__fill, .moon__rail, .meter i { transition: none; }
+
+  .btn:active, .chip:active { transform: none; }
+
+  /* Spinners stop spinning but still say "working". */
+  .spin, .orbit i { animation: pulse 1.4s ease-in-out infinite; }
+  .progress i { width: 100%; animation: pulse 1.4s ease-in-out infinite; }
 }
+@keyframes pulse { 50% { opacity: 0.35; } }
 
 /* Backdrop blur is expensive and unsupported in places; fall back to opacity. */
 @supports not (backdrop-filter: blur(1px)) {

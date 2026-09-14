@@ -8,22 +8,28 @@ import { daylightProgress } from '../lib/transform';
 const LENGTH = Math.PI * 60;
 
 export function SunArc({
-  sunrise, sunset, tz,
-}: { sunrise: number | undefined; sunset: number | undefined; tz: number }) {
+  sunrise, sunset, tz, trace = false,
+}: { sunrise: number | undefined; sunset: number | undefined; tz: number; trace?: boolean }) {
   const progress = daylightProgress(sunrise, sunset);
   const now = nowSeconds();
   const settled = progress ?? (sunrise && now < sunrise ? 0 : 1);
-
-  const dotX = 80 - 60 * Math.cos(Math.PI * settled);
-  const dotY = 66 - 60 * Math.sin(Math.PI * settled);
+  // Only a sun that is actually up gets to travel; a set or unrisen sun just sits.
+  const travels = trace && progress !== null;
 
   return (
     <div className="sun">
-      <svg viewBox="0 0 160 84" className="sun__arc" aria-hidden="true">
+      <svg viewBox="0 0 160 84" className={travels ? 'sun__arc sun--trace' : 'sun__arc'} aria-hidden="true">
         <path className="sun__track" d="M20 66 A60 60 0 0 1 140 66" />
         <path className="sun__lit" d="M20 66 A60 60 0 0 1 140 66"
           style={{ strokeDasharray: LENGTH, strokeDashoffset: LENGTH * (1 - (progress ?? 0)) }} />
-        <circle className="sun__dot" cx={dotX} cy={dotY} r="5.5" opacity={progress === null ? 0.4 : 1} />
+        {/*
+          The sun sits at the sunrise end and the group turns about the arc's
+          centre. Rotation keeps it on the curve at every frame; interpolating
+          cx/cy would cut a straight chord beneath the arc.
+        */}
+        <g className="sun__body" style={{ transform: `rotate(${settled * 180}deg)` }}>
+          <circle className="sun__dot" cx="20" cy="66" r="5.5" opacity={progress === null ? 0.4 : 1} />
+        </g>
         <line className="sun__ground" x1="10" y1="72" x2="150" y2="72" />
       </svg>
 

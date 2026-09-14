@@ -51,6 +51,26 @@
   letter-spacing: 0.01em;
 }
 
+/*
+  Focal moment. Each line rises through a horizon that stays put: the clip's
+  bottom edge and the translation move by the same amount on the same curve, so
+  the visible edge never drifts. From translateY(125%) with the clip 100% up,
+  nothing shows; at rest the clip sits 25% below the box so descenders in names
+  like "Reykjavík" are never cut. Plays once per place.
+*/
+.hero--rise > * { animation: horizon 640ms var(--ease-out) both; }
+.hero--rise > :nth-child(2) { animation-delay: 60ms; }
+.hero--rise > :nth-child(3) { animation-delay: 120ms; }
+.hero--rise > :nth-child(n + 4) { animation-delay: 190ms; }
+@keyframes horizon {
+  from { transform: translateY(125%); clip-path: inset(-20% -12% 100% -12%); }
+  to   { transform: translateY(0);    clip-path: inset(-20% -12% -25% -12%); }
+}
+
+/* The number re-settles when its unit changes: a brief loss of focus, then sharp. */
+.hero__temp--swap { animation: settle 240ms var(--ease-out) both; }
+@keyframes settle { from { opacity: 0; filter: blur(6px); } }
+
 .hero__condition { font-size: 1.15rem; font-weight: 600; letter-spacing: -0.02em; }
 .hero__sub { font-size: 0.92rem; margin-top: 0.2rem; }
 .hero__stamp { margin-top: 0.6rem; font-size: 0.76rem; }
@@ -81,9 +101,7 @@
   border-radius: var(--r);
   background: var(--well);
   border: 1px solid var(--edge);
-  transition: border-color var(--fast), background var(--fast);
 }
-.metric:hover { border-color: var(--edge-2); }
 .metric__top { display: flex; align-items: center; gap: 0.38rem; color: var(--brand); }
 .metric__value { display: block; font-size: 1.5rem; font-weight: 300; letter-spacing: -0.03em; margin-top: 0.3rem; }
 .metric__value i { font-style: normal; font-size: 0.52em; font-weight: 500; color: var(--ink-3); margin-left: 0.15em; letter-spacing: normal; }
@@ -116,9 +134,7 @@
   border-radius: var(--r);
   background: var(--well);
   border: 1px solid var(--edge);
-  transition: border-color var(--fast), transform var(--fast);
 }
-.strip__item:hover { border-color: var(--edge-2); transform: translateY(-2px); }
 .strip__item[data-now='true'] { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 16%, transparent); }
 .strip__time { font-size: 0.74rem; font-weight: 600; color: var(--ink-3); }
 .strip__item[data-now='true'] .strip__time { color: var(--brand); }
@@ -212,7 +228,16 @@
 .sun__arc { width: 100%; max-width: 300px; margin-inline: auto; overflow: visible; }
 .sun__track { fill: none; stroke: var(--edge-2); stroke-width: 2; stroke-dasharray: 3 7; stroke-linecap: round; }
 .sun__lit { fill: none; stroke: var(--gold); stroke-width: 3.5; stroke-linecap: round; transition: stroke-dashoffset 900ms var(--ease); }
-.sun__dot { fill: var(--gold); transition: cx 900ms var(--ease), cy 900ms var(--ease); }
+.sun__dot { fill: var(--gold); }
+/* Turns about the arc's centre (80, 66) in viewBox units, so the sun stays on the curve. */
+.sun__body { transform-box: view-box; transform-origin: 80px 66px; transition: transform 900ms var(--ease); }
+
+/* First sight of a place: the sun rises from the horizon to where it is now,
+   the lit path drawn behind it. Same duration and curve, so they stay locked. */
+.sun--trace .sun__lit { animation: sun-draw 1150ms var(--ease-out) 140ms both; }
+.sun--trace .sun__body { animation: sun-travel 1150ms var(--ease-out) 140ms both; }
+@keyframes sun-draw { from { stroke-dashoffset: 188.5px; } }
+@keyframes sun-travel { from { transform: rotate(0deg); } }
 .sun__ground { stroke: var(--edge); stroke-width: 1.5; stroke-linecap: round; }
 .sun__times { display: flex; justify-content: space-between; gap: 1rem; }
 .sun__times .label { display: block; }
@@ -238,7 +263,7 @@
   text-align: center;
   gap: 0.85rem;
   padding: 2rem 1rem;
-  animation: rise var(--slow) both;
+  animation: fade-in 220ms var(--ease-out) both;
 }
 .state .brand-mark { color: var(--ink); }
 .state__body { max-width: 44ch; color: var(--ink-2); }
@@ -325,18 +350,28 @@
   background: linear-gradient(90deg, var(--brand), var(--gold));
   transition: transform var(--slow);
 }
+.moon__rail {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: transform var(--slow);
+}
 .moon__marker {
   position: absolute;
+  left: -5.5px;
   top: 50%;
   width: 11px;
   height: 11px;
-  margin-left: -5.5px;
   border-radius: 50%;
   background: var(--gold);
   border: 2px solid var(--glass-2);
   translate: 0 -50%;
-  transition: left var(--slow);
 }
+/* The marker travels out from new moon to tonight, the fill following it. */
+.moon--trace .moon__fill { animation: moon-fill 1000ms var(--ease-out) 220ms both; }
+.moon--trace .moon__rail { animation: moon-rail 1000ms var(--ease-out) 220ms both; }
+@keyframes moon-fill { from { transform: scaleX(0); } }
+@keyframes moon-rail { from { transform: translateX(0); } }
 .moon__ticks {
   display: flex;
   justify-content: space-between;

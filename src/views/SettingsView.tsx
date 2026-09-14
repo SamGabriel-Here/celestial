@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { SectionHeading } from '../components/parts';
+import { Lens } from '../components/Lens';
 import { useStore, type Scheme } from '../app/store';
 import type { Unit } from '../lib/format';
 import { usesProxy } from '../lib/config';
@@ -30,12 +31,10 @@ export function SettingsView() {
             <span className="setting__name">Temperature and speed</span>
             <span className="faint setting__hint">Data is always fetched in metric and converted here, so switching costs no request.</span>
           </p>
-          <div className="seg">
-            {(['metric', 'imperial'] as Unit[]).map((value) => (
-              <button key={value} type="button" aria-pressed={unit === value} onClick={() => setUnit(value)}>
-                {value === 'metric' ? '°C' : '°F'}
-              </button>
-            ))}
+          <div className="seg" role="group" aria-label="Temperature units">
+            <Lens<Unit>
+              options={[{ value: 'metric', label: '°C' }, { value: 'imperial', label: '°F' }]}
+              value={unit} onChange={setUnit} announce="pressed" itemClassName="seg__item" />
           </div>
         </div>
       </section>

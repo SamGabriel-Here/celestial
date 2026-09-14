@@ -1,6 +1,8 @@
 import { WeatherIcon } from '../components/icons';
 import { Metric, SectionHeading, Stamp } from '../components/parts';
+import { useEffect, useRef } from 'react';
 import { useStore } from '../app/store';
+import { placeKey, useFirstShow } from '../app/motion';
 import { useRoute } from '../app/router';
 import {
   compass, degreeLabel, formatFullDate, formatHour, formatTime, placeLabel,
@@ -25,6 +27,15 @@ const describeClouds = (p: number | undefined) =>
 export function NowView() {
   const { weather, unit } = useStore();
   const { navigate } = useRoute();
+  const place = weather ? placeKey(weather.current.place) : null;
+  const arriving = useFirstShow(place && `hero:${place}`);
+
+  // The number re-settles when the unit changes under it — and only then, not
+  // when this view first mounts, where the horizon reveal already has the stage.
+  const lastUnit = useRef(unit);
+  const unitChanged = lastUnit.current !== unit;
+  useEffect(() => { lastUnit.current = unit; }, [unit]);
+
   if (!weather) return null;
 
   const { current, range, hourly } = weather;
@@ -37,7 +48,7 @@ export function NowView() {
 
   return (
     <div className="page">
-      <section className="hero">
+      <section className={arriving ? 'hero hero--rise' : 'hero'} key={place}>
         <p className="hero__place">{placeLabel(current.place)}</p>
         <p className="faint hero__date">
           {formatFullDate(current.observedAt, current.tz)} · {formatTime(current.observedAt, current.tz)} local
@@ -45,7 +56,7 @@ export function NowView() {
 
         <div className="hero__reading">
           <WeatherIcon code={current.condition.code} size={92} title={current.condition.description} />
-          <p className="hero__temp tnum">
+          <p className={unitChanged ? 'hero__temp hero__temp--swap tnum' : 'hero__temp tnum'} key={unit}>
             {temp(current.temp, unit)}<span>{degreeLabel(unit)}</span>
           </p>
         </div>

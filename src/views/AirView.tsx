@@ -2,6 +2,7 @@ import { Meter, SectionHeading, Empty } from '../components/parts';
 import { SunArc } from '../components/SunArc';
 import { MoonDial } from '../components/MoonDial';
 import { useStore } from '../app/store';
+import { placeKey, useFirstShow } from '../app/motion';
 import { AQI_LEVELS, formatTime } from '../lib/format';
 
 const POLLUTANTS: { key: 'pm2_5' | 'pm10' | 'o3' | 'no2' | 'so2' | 'co'; label: string; ceiling: number }[] = [
@@ -15,6 +16,9 @@ const POLLUTANTS: { key: 'pm2_5' | 'pm10' | 'o3' | 'no2' | 'so2' | 'co'; label: 
 
 export function AirView() {
   const { weather } = useStore();
+  const traceSun = useFirstShow(weather ? `sun:${placeKey(weather.current.place)}` : null);
+  // Phase is the same wherever you search, so the moon travels once per session.
+  const traceMoon = useFirstShow('moon');
   if (!weather) return null;
   const { air, current } = weather;
   const level = air ? AQI_LEVELS[air.aqi] : null;
@@ -62,12 +66,12 @@ export function AirView() {
 
       <section className="panel">
         <SectionHeading title="Sun cycle" />
-        <SunArc sunrise={current.sunrise} sunset={current.sunset} tz={current.tz} />
+        <SunArc sunrise={current.sunrise} sunset={current.sunset} tz={current.tz} trace={traceSun} />
       </section>
 
       <section className="panel">
         <SectionHeading title="Moon cycle" aside={<span className="faint">Tonight</span>} />
-        <MoonDial />
+        <MoonDial trace={traceMoon} />
       </section>
     </div>
   );

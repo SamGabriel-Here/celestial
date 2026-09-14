@@ -2,7 +2,7 @@
  * App.tsx — the shell: sky, top bar, routed view, tab bar.
  * ========================================================================== */
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { SkyCanvas } from './components/SkyCanvas';
 import { BrandMark, Icon } from './components/icons';
 import { EmptyState, ErrorState, LoadingState, SetupState } from './components/States';
@@ -13,6 +13,9 @@ import { AirView } from './views/AirView';
 import { SettingsView } from './views/SettingsView';
 import { ROUTES, ROUTE_META, useRoute, type Route } from './app/router';
 import { useStore } from './app/store';
+import { useFirstShow } from './app/motion';
+import { Lens } from './components/Lens';
+import type { Unit } from './lib/format';
 
 const VIEWS: Record<Route, () => JSX.Element | null> = {
   now: NowView,
@@ -21,6 +24,32 @@ const VIEWS: Record<Route, () => JSX.Element | null> = {
   air: AirView,
   settings: SettingsView,
 };
+
+const TAB_OPTIONS = ROUTES.map((name) => ({
+  value: name,
+  title: ROUTE_META[name].title,
+  label: (
+    <>
+      <Icon name={ROUTE_META[name].icon as never} size={16} />
+      <span>{ROUTE_META[name].label}</span>
+    </>
+  ),
+}));
+
+const UNIT_OPTIONS: { value: Unit; label: string }[] = [
+  { value: 'metric', label: '°C' },
+  { value: 'imperial', label: '°F' },
+];
+
+/** Plays the directional entrance once per navigation, never on a plain remount. */
+function ViewFrame({ navId, direction, children }: { navId: number; direction: number; children: JSX.Element }) {
+  const entering = useFirstShow(`view:${navId}`);
+  return (
+    <div className={entering ? 'view view--enter' : 'view'} style={{ '--dir': direction } as CSSProperties}>
+      {children}
+    </div>
+  );
+}
 
 export default function App() {
   const { status, busy, weather, sky, scheme, search, locate, refresh, unit, setUnit } = useStore();
@@ -46,6 +75,18 @@ export default function App() {
 
   const View = VIEWS[route];
 
+  // Latched during render (idempotent under StrictMode's double render): the
+  // direction belongs to the navigation that produced this render, and a
+  // remount for any other reason keeps the same id and so plays nothing.
+  const nav = useRef({ route, id: 0, direction: 0 });
+  if (nav.current.route !== route) {
+    nav.current = {
+      route,
+      id: nav.current.id + 1,
+      direction: Math.sign(ROUTES.indexOf(route) - ROUTES.indexOf(nav.current.route)),
+    };
+  }
+
   return (
     <>
       <SkyCanvas sky={sky} />
@@ -69,8 +110,8 @@ export default function App() {
 
           <div className="topbar__tools">
             <div className="seg" role="group" aria-label="Units">
-              <button type="button" aria-pressed={unit === 'metric'} onClick={() => setUnit('metric')}>°C</button>
-              <button type="button" aria-pressed={unit === 'imperial'} onClick={() => setUnit('imperial')}>°F</button>
+              <Lens<Unit> options={UNIT_OPTIONS} value={unit} onChange={setUnit}
+                announce="pressed" itemClassName="seg__item" />
             </div>
             <button type="button" className="btn btn--icon" onClick={() => void locate()} title="Use my location">
               <Icon name="pin" size={16} /><span className="sr-only">Use my location</span>
@@ -89,19 +130,17 @@ export default function App() {
           {status === 'error' && route !== 'settings' ? <ErrorState /> : null}
           {status === 'loading' ? <LoadingState /> : null}
           {status === 'idle' && route !== 'settings' ? <EmptyState /> : null}
-          {showChrome && status !== 'loading' ? <View /> : null}
+          {showChrome && status !== 'loading' ? (
+            <ViewFrame navId={nav.current.id} direction={nav.current.direction}>
+              <View />
+            </ViewFrame>
+          ) : null}
         </main>
 
         {showChrome ? (
           <nav className="tabbar" aria-label="Views">
-            {ROUTES.map((name) => (
-              <button key={name} type="button" className="tab"
-                aria-current={route === name ? 'page' : undefined}
-                onClick={() => navigate(name)} title={ROUTE_META[name].title}>
-                <Icon name={ROUTE_META[name].icon as never} size={16} />
-                <span>{ROUTE_META[name].label}</span>
-              </button>
-            ))}
+            <Lens<Route> options={TAB_OPTIONS} value={route} onChange={navigate}
+              announce="current" itemClassName="tab" />
           </nav>
         ) : null}
       </div>

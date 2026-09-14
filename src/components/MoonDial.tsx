@@ -42,7 +42,7 @@ export function MoonFace({ size = 64, at }: { size?: number; at?: number }) {
   );
 }
 
-export function MoonDial({ at }: { at?: number }) {
+export function MoonDial({ at, trace = false }: { at?: number; trace?: boolean }) {
   const moon = moonAt(at);
   const days = (value: number) => (value < 1 ? 'tomorrow' : `in ${Math.round(value)} days`);
 
@@ -59,10 +59,13 @@ export function MoonDial({ at }: { at?: number }) {
 
       {/* The cycle as a track: where tonight sits between one new moon and the next. */}
       <div className="moon__cycle">
-        <div className="moon__track" role="img"
+        <div className={trace ? 'moon__track moon--trace' : 'moon__track'} role="img"
           aria-label={`${Math.round(moon.phase * 100)} percent through the lunar cycle`}>
           <span className="moon__fill" style={{ transform: `scaleX(${moon.phase})` }} />
-          <span className="moon__marker" style={{ left: `${moon.phase * 100}%` }} />
+          {/* A track-wide rail, so translateX percentages are fractions of the track. */}
+          <span className="moon__rail" style={{ transform: `translateX(${moon.phase * 100}%)` }}>
+            <span className="moon__marker" />
+          </span>
         </div>
         <div className="moon__ticks faint">
           <span>New</span><span>First</span><span>Full</span><span>Last</span><span>New</span>

@@ -23,6 +23,8 @@
   --shell: 1180px;
 
   --ease: cubic-bezier(0.22, 0.68, 0, 1);
+  /* Exponential ease-out: confident arrivals that settle rather than stop. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --fast: 180ms var(--ease);
   --slow: 420ms var(--ease);
 
