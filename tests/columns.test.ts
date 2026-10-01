@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { altitudeY, cloudBase, hourColumns } from '../src/lib/columns';
+import { altitudeY, cloudBase, dayColumns, hourColumns } from '../src/lib/columns';
 import { parseForecast } from '../src/lib/openmeteo';
 import { clockLabel } from '../src/lib/units';
 import tokyo from './fixtures/tokyo.json';
@@ -43,4 +43,20 @@ describe('geometry', () => {
     expect(altitudeY(0, 0, 100)).toBe(100);
     expect(altitudeY(6000, 20, 100)).toBe(70);
   });
+});
+
+describe('dayColumns', () => {
+  const days = dayColumns(f);
+  it('has one column per forecast day', () => expect(days).toHaveLength(16));
+  it('averages each local date’s hourly cloud decks', () => {
+    const first = tokyo.hourly.cloud_cover_low.slice(0, 24);
+    expect(days[0]!.low).toBeCloseTo(first.reduce((a, b) => a + b, 0) / 24, 6);
+  });
+  it('carries the day’s range, rain and label', () => {
+    expect(days[0]!.temp).toBe(f.days[0]!.max);
+    expect(days[0]!.tempMin).toBe(f.days[0]!.min);
+    expect(days[0]!.mm).toBe(f.days[0]!.mm);
+    expect(days[0]!.label).toBe('Thu');
+  });
+  it('lights each day by its noon sun', () => expect(days.every((d) => d.sunAlt > 0)).toBe(true));
 });

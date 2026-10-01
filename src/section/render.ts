@@ -159,9 +159,12 @@ export function createSection(canvas: HTMLCanvasElement): SectionApi {
         ctx.font = `600 12px ${SANS}`; ctx.fillText(day, x + 5, 14);
         ctx.font = `500 12px ${MONO}`; ctx.fillStyle = INK2;
       }
-      const every = opts.kind === 'days' ? 1 : 3;
-      if (opts.kind === 'days' || Number(c.label.slice(0, 2)) % every === 0) {
-        ctx.fillText(opts.kind === 'days' ? c.label : c.label.slice(0, 2), x + 4, 28);
+      if (opts.kind === 'days') {
+        ctx.fillStyle = INK; ctx.font = `600 12px ${SANS}`; ctx.fillText(cw < 40 ? c.label.slice(0, 2) : c.label, x + 4, 14);
+        ctx.fillStyle = INK2; ctx.font = `500 12px ${MONO}`; ctx.fillText(String(Number(c.iso.slice(8, 10))), x + 4, 28);
+        ctx.fillRect(x, 0, 1, RULER);
+      } else if (Number(c.label.slice(0, 2)) % 3 === 0) {
+        ctx.fillText(c.label.slice(0, 2), x + 4, 28);
         ctx.fillRect(x, RULER - 5, 1, 5);
       }
     });
@@ -222,7 +225,7 @@ export function createSection(canvas: HTMLCanvasElement): SectionApi {
 
     const temps = cols.flatMap((c) => (c.tempMin != null ? [c.temp, c.tempMin] : [c.temp]));
     const lo = Math.min(...temps) - 1, hi = Math.max(...temps) + 1;
-    const Y = (t: number) => top + 34 + (1 - (t - lo) / (hi - lo)) * (SURFACE - 84);
+    const Y = (t: number) => top + 46 + (1 - (t - lo) / (hi - lo)) * (SURFACE - 96);
     ctx.font = `500 12px ${MONO}`; ctx.textAlign = 'center'; ctx.fillStyle = INK;
 
     if (opts.kind === 'days') {

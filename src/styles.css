@@ -118,3 +118,6 @@ button { cursor: pointer; }
   .panel-body { height: 64dvh; min-height: 420px; }
 }
 .rail-more { display: flex; flex-direction: column; gap: 18px; }
+.summary { font: 400 17px/1.4 var(--sans); }
+.week li.day > span:nth-child(2) { display: grid; }
+.week li small { color: var(--ink-2); font-size: 12px; }

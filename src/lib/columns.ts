@@ -41,3 +41,22 @@ export const cloudBase = (c: Pick<Column, 'low' | 'mid'>): number => (c.low > 20
 
 /** Canvas y for an altitude: 12 km at `top`, the ground at `top + height`. */
 export const altitudeY = (m: number, top: number, height: number): number => top + (1 - m / TOP_M) * height;
+
+const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
+
+/** One column per forecast day: the day's mean cloud decks, its range, rain and noon sun. */
+export function dayColumns(f: Forecast): Column[] {
+  return f.days.map((d) => {
+    const hrs = f.hours.filter((h) => h.iso.startsWith(d.iso));
+    const freezes = hrs.flatMap((h) => (h.freeze === null ? [] : [h.freeze]));
+    const [y, m, dd] = d.iso.split('-').map(Number) as [number, number, number];
+    const solarNoon = Date.UTC(y, m - 1, dd, 12) - (f.place.lon / 15) * HOUR;
+    return {
+      startMs: solarNoon, iso: d.iso, label: weekday(d.iso),
+      sunAlt: sunPosition(solarNoon, f.place.lat, f.place.lon).alt,
+      low: mean(hrs.map((h) => h.low)), mid: mean(hrs.map((h) => h.mid)), high: mean(hrs.map((h) => h.high)),
+      mm: d.mm, pop: d.pop, freeze: freezes.length ? mean(freezes) : null,
+      temp: d.max, tempMin: d.min, uv: d.uv, code: d.code, wind: Math.max(0, ...hrs.map((h) => h.wind)),
+    };
+  });
+}
