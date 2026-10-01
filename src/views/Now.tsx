@@ -4,6 +4,7 @@ import { Dial, type Segment } from '../dial/Dial';
 import { SkyWindow } from '../dial/SkyWindow';
 import { moonPhase, phaseName } from '../lib/astro';
 import { hourColumns } from '../lib/columns';
+import { skyColour } from '../lib/sky';
 import { capitalise, clockLabel, fmtTemp, fmtWind, weatherWords, weekday } from '../lib/units';
 
 const SPAN = 24;
@@ -26,11 +27,13 @@ export function NowDial() {
     // The current hour shows the current reading, so the rim agrees with the big number.
     key: x.iso, top: x.label.slice(0, 2), bottom: fmtTemp(k === 0 && forecast ? forecast.current.temp : x.temp, u), mark: k === 0,
     ...((x.pop ?? 0) >= 10 || x.mm > 0 ? { spoke: Math.max(0.001, x.mm / maxMm), spokeAlpha: (x.pop ?? 50) / 100 } : {}),
+    band: skyColour(x.sunAlt, 0).horizon, // the hour's sky: night deep, twilight warm, day light
   }));
+  const glow = skyColour(c.sunAlt, Math.max(c.low, c.mid, c.high)).horizon;
   const text = `${clockLabel(c.iso)}, ${fmtTemp(i === 0 && forecast ? forecast.current.temp : c.temp, u)}, ${weatherWords(c.code)}, ${c.pop ?? 'unknown'}% chance of rain`;
   return (
     <>
-      <Dial segments={segments} index={i} onIndex={onIndex} label="Turn the wheel to see another hour" valueText={text}>
+      <Dial segments={segments} index={i} onIndex={onIndex} label="Turn the wheel to see another hour" valueText={text} glow={glow}>
         <SkyWindow ms={c.startMs + 1800e3} lat={place.lat} lon={place.lon} low={c.low} mid={c.mid} high={c.high} mm={c.mm}
           label={`The sky over ${place.name} at ${clockLabel(c.iso)}: ${weatherWords(c.code)}, ${Math.max(c.low, c.mid, c.high)}% cloud`} />
       </Dial>

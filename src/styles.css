@@ -8,6 +8,7 @@
   --line-soft: rgb(243 245 251 / .16);
   --sun: #ffc92e;
   --rain: #a0cdff;
+  --disc: #2347b2; /* the rim disc: one step lighter than the card it sits on */
   --sans: 'Jost', system-ui, sans-serif;
   --dial: min(76vh, 46vw);
   color-scheme: dark;
@@ -17,7 +18,10 @@
 html { background: var(--card-deep); color: var(--print); -webkit-text-size-adjust: 100%; }
 body {
   font: 400 16px/1.4 var(--sans); min-height: 100dvh;
-  background: radial-gradient(120% 90% at 50% 45%, var(--card) 55%, var(--card-deep));
+  /* Card stock: a fine fibre grain over the cobalt, darkening toward the edges. */
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .055 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E"),
+    radial-gradient(120% 90% at 50% 45%, var(--card) 55%, var(--card-deep));
 }
 button, input { font: inherit; color: inherit; }
 button { cursor: pointer; }
@@ -99,7 +103,21 @@ button { cursor: pointer; }
 
 /* ---------- the dial ---------- */
 .dial { position: relative; width: var(--dial); aspect-ratio: 1; }
+/* The selected moment's sky, lit behind the instrument. */
+.dial-glow { position: absolute; inset: -24%; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, var(--glow, transparent) 0%, transparent 62%); opacity: .42; transition: background 700ms ease; }
+/* A star chart printed on the card around the wheel: meridians and parallels, fading out. */
+.dial::before { content: ''; position: absolute; inset: -16%; border-radius: 50%; pointer-events: none; z-index: -1;
+  background:
+    repeating-conic-gradient(from 0deg, rgb(243 245 251 / .07) 0 .35deg, transparent .35deg 15deg),
+    repeating-radial-gradient(circle, rgb(243 245 251 / .07) 0 1px, transparent 1px 7%);
+  -webkit-mask: radial-gradient(circle, transparent 47%, #000 53%, transparent 71%);
+  mask: radial-gradient(circle, transparent 47%, #000 53%, transparent 71%); }
 .dial-window { position: absolute; inset: 17%; border-radius: 50%; overflow: hidden; background: var(--card-deep); }
+/* The window is cut into the disc: an inset edge and a faint sheen of glass. */
+.dial-window::after { content: ''; position: absolute; inset: 0; border-radius: 50%; pointer-events: none; z-index: 500;
+  box-shadow: inset 0 10px 26px rgb(3 8 32 / .62), inset 0 -2px 6px rgb(243 245 251 / .08);
+  background: radial-gradient(120% 80% at 28% 12%, rgb(255 255 255 / .09), transparent 46%); }
 .dial-window canvas { display: block; width: 100%; height: 100%; animation: develop 700ms ease-out both; }
 .dial-rim { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 .dial-rim .grip { fill: none; stroke: transparent; pointer-events: stroke; touch-action: none; cursor: grab; }
@@ -107,6 +125,11 @@ button { cursor: pointer; }
 .dial-rim:focus-visible { outline: none; }
 .dial-rim:focus-visible .ring-outer { stroke: var(--sun); stroke-width: 3; }
 .ring-window { fill: none; stroke: var(--print); stroke-width: 3; }
+.disc { fill: var(--disc); }
+.band { opacity: .55; }
+.tick-fine { stroke: var(--print); stroke-width: 1.2; opacity: .4; }
+.degree-scale line { stroke: rgb(243 245 251 / .28); stroke-width: 1.2; }
+.degree-scale line.long { stroke: rgb(243 245 251 / .5); stroke-width: 1.6; }
 .ring-outer { fill: none; stroke: var(--line); stroke-width: 1.5; }
 .ring-inner { fill: none; stroke: var(--line-soft); stroke-width: 1; stroke-dasharray: 2 6; }
 .tick { stroke: var(--print); stroke-width: 2; }

@@ -3,6 +3,7 @@ import { useData } from '../app/data';
 import { Dial, type Segment } from '../dial/Dial';
 import { SkyWindow } from '../dial/SkyWindow';
 import { dayColumns } from '../lib/columns';
+import { skyColour } from '../lib/sky';
 import { capitalise, fmtTemp, weatherWords, weekday } from '../lib/units';
 
 const dateOf = (iso: string) => Number(iso.slice(8, 10));
@@ -27,7 +28,7 @@ export function DaysDial() {
   }));
   return (
     <>
-      <Dial segments={segments} index={i} onIndex={onIndex} label="Turn the wheel to see another day"
+      <Dial segments={segments} index={i} onIndex={onIndex} label="Turn the wheel to see another day" glow={skyColour(c.sunAlt, Math.max(c.low, c.mid, c.high)).horizon}
         valueText={`${weekday(c.iso)} ${dateOf(c.iso)}: high ${fmtTemp(c.temp, u)}, low ${fmtTemp(c.tempMin ?? c.temp, u)}, ${weatherWords(c.code)}`}>
         <SkyWindow ms={c.startMs} lat={place.lat} lon={place.lon} low={c.low} mid={c.mid} high={c.high} mm={c.mm / 24}
           label={`The noon sky over ${place.name} on ${weekday(c.iso)} ${dateOf(c.iso)}: ${weatherWords(c.code)}`} />

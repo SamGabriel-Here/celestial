@@ -16,6 +16,16 @@ export interface SkyOpts {
 
 const rng = (seed: number) => () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
 
+// Constellation figures, drawn between the real positions of their stars.
+const FIGURES: [string, string][] = [
+  ['Dubhe', 'Merak'], ['Merak', 'Phecda'], ['Phecda', 'Megrez'], ['Megrez', 'Dubhe'], ['Megrez', 'Alioth'], ['Alioth', 'Mizar'], ['Mizar', 'Alkaid'],
+  ['Betelgeuse', 'Bellatrix'], ['Betelgeuse', 'Alnitak'], ['Bellatrix', 'Mintaka'], ['Mintaka', 'Alnilam'], ['Alnilam', 'Alnitak'],
+  ['Alnitak', 'Saiph'], ['Mintaka', 'Rigel'], ['Saiph', 'Rigel'],
+  ['Caph', 'Schedar'], ['Schedar', 'Navi'], ['Navi', 'Ruchbah'], ['Ruchbah', 'Segin'],
+  ['Castor', 'Pollux'], ['Vega', 'Deneb'], ['Deneb', 'Altair'], ['Altair', 'Vega'], ['Acrux', 'Gacrux'],
+];
+const BY_NAME = new Map(STARS.map((s) => [s[0], s]));
+
 export function drawSky(canvas: HTMLCanvasElement, o: SkyOpts): void {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const size = canvas.clientWidth;
@@ -50,6 +60,16 @@ export function drawSky(canvas: HTMLCanvasElement, o: SkyOpts): void {
 
   const dark = Math.min(1, Math.max(0, (-sun.alt - 4) / 10));
   if (dark > 0.03) {
+    g.strokeStyle = 'rgba(243,245,251,.32)';
+    g.lineWidth = Math.max(0.8, size / 520);
+    g.globalAlpha = dark * (1 - cloud / 130);
+    for (const [a, b] of FIGURES) {
+      const pa = starPosition(BY_NAME.get(a)!, o.ms, o.lat, o.lon), pb = starPosition(BY_NAME.get(b)!, o.ms, o.lat, o.lon);
+      if (pa.alt < 0 || pb.alt < 0) continue;
+      const [x1, y1] = at(pa.alt, pa.az), [x2, y2] = at(pb.alt, pb.az);
+      g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+    }
+    g.globalAlpha = 1;
     g.font = `400 ${Math.max(10, size / 46)}px Jost, sans-serif`;
     for (const s of STARS) {
       const p = starPosition(s, o.ms, o.lat, o.lon);
