@@ -1,0 +1,46 @@
+import { describe, expect, it } from 'vitest';
+import { altitudeY, cloudBase, hourColumns } from '../src/lib/columns';
+import { parseForecast } from '../src/lib/openmeteo';
+import { clockLabel } from '../src/lib/units';
+import tokyo from './fixtures/tokyo.json';
+
+const f = parseForecast(tokyo, { id: '35.68,139.69', name: 'Tokyo', country: 'JP', lat: 35.68, lon: 139.69 });
+const now = f.hours[10]!.ms + 20 * 60e3; // 20 minutes into the 11th hour
+
+describe('hourColumns', () => {
+  const cols = hourColumns(f, now);
+  it('covers 36 hours starting at the current local hour', () => {
+    expect(cols).toHaveLength(36);
+    expect(cols[0]!.label).toBe(clockLabel(f.hours[10]!.iso));
+    expect(cols[0]!.iso).toBe(f.hours[10]!.iso);
+  });
+  it('labels the day at local midnight', () => {
+    const midnight = cols.find((c) => c.iso.endsWith('T00:00'))!;
+    expect(midnight.dayLabel).toBe('Fri');
+    expect(cols[0]!.dayLabel).toBeUndefined();
+  });
+  it('keeps an unknown chance of rain unknown', () => {
+    const j = structuredClone(tokyo) as unknown as { hourly: Record<string, (number | null)[]> };
+    j.hourly.precipitation_probability![12] = null;
+    const g = parseForecast(j, f.place);
+    expect(hourColumns(g, now)[2]!.pop).toBeNull();
+  });
+  it('computes the sun for each hour', () => {
+    expect(cols.some((c) => c.sunAlt > 0)).toBe(true);
+    expect(cols.some((c) => c.sunAlt < 0)).toBe(true);
+  });
+});
+
+describe('geometry', () => {
+  it('puts the cloud base under the lowest cloud deck', () => {
+    const base = { low: 0, mid: 0 } as Parameters<typeof cloudBase>[0];
+    expect(cloudBase({ ...base, low: 60 })).toBe(1400);
+    expect(cloudBase({ ...base, mid: 60 })).toBe(3000);
+    expect(cloudBase(base)).toBe(2000);
+  });
+  it('maps 12 km to the top and the ground to the bottom', () => {
+    expect(altitudeY(12000, 0, 100)).toBe(0);
+    expect(altitudeY(0, 0, 100)).toBe(100);
+    expect(altitudeY(6000, 20, 100)).toBe(70);
+  });
+});

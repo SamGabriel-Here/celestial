@@ -1,5 +1,6 @@
 import { Rail } from '../components/Rail';
 import { Tabs } from '../components/Tabs';
+import { NowPanel, NowRail } from '../views/Now';
 import { DataProvider, useData } from './data';
 
 export function App() {
@@ -11,13 +12,13 @@ export function App() {
 }
 
 function Shell() {
-  const { url } = useData();
+  const { url, forecast } = useData();
   return (
     <div className="app">
-      <Rail />
+      <Rail>{url.view === 'now' && <NowRail />}</Rail>
       <main className="panel" aria-label="Sky">
         <Tabs />
-        <div className="panel-body">{url.view}</div>
+        <div className="panel-body">{forecast && url.view === 'now' && <NowPanel />}</div>
       </main>
     </div>
   );

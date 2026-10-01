@@ -74,12 +74,47 @@ button { cursor: pointer; }
 .tabs a[aria-current='page'] { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
 
 @media (max-width: 900px) {
-  .app { grid-template-columns: 1fr; }
-  .rail { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--rule); padding: 16px 16px 20px; }
-  .panel { height: auto; min-height: 70dvh; padding-bottom: 56px; }
+  /* Phone reading order: the answer, then the section, then the detail lists. */
+  .app { display: flex; flex-direction: column; gap: 16px; padding-bottom: 64px; }
+  .rail { display: contents; }
+  .rail > * { margin-inline: 16px; }
+  .rail > .brand { margin-top: 16px; }
+  .rail-more { order: 2; display: flex; flex-direction: column; gap: 18px; }
+  .panel { order: 1; height: auto; min-width: 0; border-block: 1px solid var(--rule); }
   .tabs { position: fixed; z-index: 20; left: 0; right: 0; bottom: 0; border-top: 1px solid var(--rule); border-bottom: 0;
     justify-content: space-around; padding: 0 0 env(safe-area-inset-bottom); }
   .tabs a { padding: 14px 6px; font-size: 13px; border-bottom: 0; border-top: 2px solid transparent; }
   .tabs a[aria-current='page'] { border-top-color: var(--ink); }
   .now .t { font-size: 88px; }
 }
+
+/* ---------- section ---------- */
+.section { position: absolute; inset: 0; }
+.section-scroll { position: absolute; inset: 0; overflow-x: auto; overflow-y: hidden; cursor: crosshair; }
+.section-scroll:focus-visible { outline-offset: -3px; }
+.section-track { position: relative; height: 100%; min-width: 100%; }
+.section-track canvas { display: block; width: 100%; height: 100%; }
+.readout { position: absolute; pointer-events: none; background: var(--paper); color: var(--ink); padding: 10px 12px; min-width: 172px;
+  display: grid; gap: 2px; font-size: 13px; box-shadow: 0 6px 22px rgb(17 20 27 / .22); transform: translateX(12px); }
+.readout b { font: 600 15px/1.2 var(--sans); margin-bottom: 2px; }
+.readout.flip { transform: translateX(calc(-100% - 12px)); }
+
+/* ---------- rail sections ---------- */
+.rail h2 { font: 600 12px/1 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 10px; }
+.small { font-size: 13px; }
+.rain2h .bars { display: flex; align-items: flex-end; gap: 3px; height: 38px; border-bottom: 1px solid var(--ink); }
+.rain2h .bars span { flex: 1; background: var(--rain); }
+.rain2h .ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-2); margin-top: 4px; }
+.rain2h p { margin-top: 6px; }
+.layers dl > div { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: baseline; padding: 8px 0; border-top: 1px solid var(--rule); font-size: 14px; }
+.layers dt small { display: block; color: var(--ink-2); font-size: 12px; }
+.layers .frz dd { color: var(--freeze); }
+.week ol { list-style: none; padding: 0; }
+.week li { display: grid; grid-template-columns: 3.4em 1fr auto; gap: 10px; padding: 7px 0; border-top: 1px solid var(--rule); font-size: 14px; }
+.week li > span:first-child { color: var(--ink-2); }
+.week .lo { color: var(--ink-2); }
+
+@media (max-width: 900px) {
+  .panel-body { height: 64dvh; min-height: 420px; }
+}
+.rail-more { display: flex; flex-direction: column; gap: 18px; }
