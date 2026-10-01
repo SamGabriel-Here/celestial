@@ -1,19 +1,16 @@
 <!doctype html>
-<html lang="en" data-chrome="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Celestial · Weather</title>
-    <meta name="description" content="Celestial — live weather under the sky you are actually looking at. Current conditions, hourly outlook, five days ahead, air quality and daylight." />
-    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
-    <link rel="apple-touch-icon" href="/assets/celestial-app-icon.svg" />
-    <meta name="theme-color" content="#050914" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <title>Celestial</title>
+    <meta name="description" content="Weather drawn as a slice of the real atmosphere: the next 36 hours of cloud, rain and sky over any place, with radar, air quality, the sun and the moon." />
+    <meta name="theme-color" content="#f3f2ec" />
+    <link rel="preconnect" href="https://api.open-meteo.com" crossorigin />
   </head>
   <body>
     <div id="root"></div>
-    <noscript>Celestial needs JavaScript enabled to fetch weather data.</noscript>
+    <noscript>Celestial needs JavaScript to read the forecast.</noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
