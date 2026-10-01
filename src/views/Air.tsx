@@ -1,28 +1,27 @@
-import { useMemo } from 'react';
 import { useData } from '../app/data';
 import { Dial, type Segment } from '../dial/Dial';
 import { SkyWindow } from '../dial/SkyWindow';
 import { moonPhase, phaseName } from '../lib/astro';
-import { localIso } from '../lib/units';
+import { offsetAt, zonedIso } from '../lib/units';
 
 const DAY = 864e5;
 const CYCLE = 30; // days on the rim: one lunar month
 
 /** The sky now, and a rim of the coming lunar month: spoke length is how much of the moon is lit. */
 export function AirDial() {
-  const { place, forecast, url, setUrl } = useData();
-  const now = useMemo(() => Date.now(), [forecast]);
+  const { place, forecast, url, setUrl, now } = useData();
   if (!place || !forecast) return null;
-  const off = forecast.offsetSec;
+  const tz = forecast.timezone;
   const i = Math.min(url.t, CYCLE - 1);
   // Day 0 is now; later days show that night at 22:00 local.
   const nightOf = (k: number) => {
-    const local = localIso(now + k * DAY, off).slice(0, 10);
-    return Date.parse(`${local}T22:00Z`) - off * 1000;
+    const local = zonedIso(now + k * DAY, tz).slice(0, 10);
+    const guess = Date.parse(`${local}T22:00Z`);
+    return guess - offsetAt(guess, tz) * 1000; // 22:00 on the place's own clock
   };
   const days = Array.from({ length: CYCLE }, (_, k) => {
     const ms = k ? nightOf(k) : now;
-    return { ms, ...moonPhase(ms), iso: localIso(ms, off) };
+    return { ms, ...moonPhase(ms), iso: zonedIso(ms, tz) };
   });
   const segments: Segment[] = days.map((d, k) => {
     const prev = k ? days[k - 1]!.phase : d.phase;

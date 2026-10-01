@@ -62,8 +62,10 @@ export interface Current {
 export interface Forecast {
   place: Place;
   offsetSec: number;
+  timezone: string; // IANA zone; labels come from it, not from offsetSec
   fetchedAt: number;
-  asOf: string; // local ISO of the API's current observation
+  asOf: string; // local time of the API's current observation
+  asOfMs: number;
   current: Current;
   hours: Hour[];
   quarters: Quarter[];

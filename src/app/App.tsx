@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { Component, lazy, Suspense, type ReactNode } from 'react';
 import { Mark } from '../components/Mark';
 import { Places } from '../components/Places';
 import { RainTimeline } from '../components/RainTimeline';
@@ -16,14 +16,33 @@ const AirDial = lazy(() => import('../views/Air').then((m) => ({ default: m.AirD
 
 export function App() {
   return (
-    <DataProvider>
-      <Card />
-    </DataProvider>
+    <Fallback>
+      <DataProvider>
+        <Card />
+      </DataProvider>
+    </Fallback>
   );
 }
 
+/** If anything throws while drawing, say so and offer a reload instead of a blank page. */
+class Fallback extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return (
+      <main className="stage">
+        <section className="reading error" role="alert">
+          <h1>Something went wrong drawing the sky.</h1>
+          <button type="button" className="chip" onClick={() => location.reload()}>Reload</button>
+        </section>
+      </main>
+    );
+  }
+}
+
 function Card() {
-  const { url, forecast } = useData();
+  const { url, forecast, now } = useData();
   const v = url.view;
   const showRain = forecast && (v === 'now' || v === 'radar');
   return (
@@ -34,7 +53,7 @@ function Card() {
         <Search />
       </header>
       <main className="stage">
-        <Reading>{showRain && <RainTimeline quarters={forecast.quarters} />}</Reading>
+        <Reading>{showRain && <RainTimeline quarters={forecast.quarters.filter((q) => q.ms + 15 * 60e3 > now)} />}</Reading>
         <div className="dial-col">
           {forecast && (
             <Suspense fallback={<p className="dial-hint">Loading…</p>}>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { indexFromDrag, pointerAngle, segmentAngle } from '../lib/dial';
+import { dragStart, dragTo, pointerAngle, segmentAngle, wheelSteps, type Drag } from '../lib/dial';
 
 export interface Segment {
   key: string;
@@ -26,7 +26,8 @@ const R_WIN = 330, R_RIM = 470, R_LABEL = 432;
 
 export function Dial({ segments, index, onIndex, label, valueText, children, turnMs = 900 }: Props) {
   const svg = useRef<SVGSVGElement>(null);
-  const drag = useRef<{ start: number; deg: number } | null>(null);
+  const drag = useRef<Drag | null>(null);
+  const wheel = useRef(0);
   const latest = useRef(index);
   latest.current = index;
   const n = Math.max(1, segments.length);
@@ -43,12 +44,20 @@ export function Dial({ segments, index, onIndex, label, valueText, children, tur
   // The load swing is always the slow one; later turns use the view's pace.
   const transition = reduced ? 'none' : `transform ${settled ? turnMs : 900}ms cubic-bezier(.16, 1, .3, 1)`;
 
-  const step = (to: number) => onIndex(Math.max(0, Math.min(n - 1, to)));
+  const step = (to: number) => {
+    const i = Math.max(0, Math.min(n - 1, to));
+    if (i !== latest.current) onIndex(i); // no update, and no address-bar write, when nothing moves
+  };
 
   // Wheel scrolling turns the rim; needs a non-passive listener to stop the page scrolling.
   useEffect(() => {
     const el = svg.current!;
-    const onWheel = (e: WheelEvent) => { e.preventDefault(); step(latest.current + Math.sign(e.deltaY || e.deltaX)); };
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const r = wheelSteps(wheel.current, e.deltaY || e.deltaX);
+      wheel.current = r.acc;
+      if (r.steps) step(latest.current + r.steps);
+    };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
     // Deps deliberately narrow: `step` reads the latest index through the ref.
@@ -64,10 +73,6 @@ export function Dial({ segments, index, onIndex, label, valueText, children, tur
       <div className="dial-window">{children}</div>
       <svg ref={svg} className="dial-rim" viewBox="-500 -500 1000 1000" role="slider" tabIndex={0}
         aria-label={label} aria-valuemin={0} aria-valuemax={n - 1} aria-valuenow={index} aria-valuetext={valueText}
-        onPointerDown={(e) => { svg.current!.setPointerCapture(e.pointerId); drag.current = { start: index, deg: angleOf(e) }; }}
-        onPointerMove={(e) => { if (drag.current) { const i = indexFromDrag(drag.current.start, drag.current.deg, angleOf(e), n); if (i !== latest.current) onIndex(i); } }}
-        onPointerUp={() => { drag.current = null; }}
-        onPointerCancel={() => { drag.current = null; }}
         onKeyDown={(e) => {
           const k: Record<string, number> = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1, PageUp: 6, PageDown: -6 };
           if (e.key === 'Home') { e.preventDefault(); return step(0); }
@@ -76,6 +81,12 @@ export function Dial({ segments, index, onIndex, label, valueText, children, tur
         }}>
         <circle r={R_WIN} className="ring-window" />
         <circle r={R_RIM} className="ring-outer" />
+        {/* Only the printed rim turns: the sky window and the centre let the page scroll. */}
+        <circle r={(R_WIN + R_RIM + 30) / 2} strokeWidth={R_RIM + 30 - R_WIN} className="grip"
+          onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); drag.current = dragStart(latest.current, angleOf(e)); }}
+          onPointerMove={(e) => { if (!drag.current) return; const r = dragTo(drag.current, angleOf(e), n); drag.current = r.state; step(r.index); }}
+          onPointerUp={() => { drag.current = null; }}
+          onPointerCancel={() => { drag.current = null; }} />
         <circle r={R_RIM - 74} className="ring-inner" />
         <g style={{ transform: `rotate(${rotation}deg)`, transition }}>
           {segments.map((s, i) => {

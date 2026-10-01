@@ -25,7 +25,7 @@ export function parseUrl(href: string): AppUrl {
 export function buildUrl(u: AppUrl): string {
   const p = new URLSearchParams();
   if (u.q) p.set('q', u.q);
-  else if (u.at) p.set('at', `${u.at.lat},${u.at.lon}`);
+  if (u.at) p.set('at', `${u.at.lat},${u.at.lon}`); // identity: two Springfields share a name
   if (u.t) p.set('t', String(u.t));
   const s = p.toString();
   return `/${s ? `?${s}` : ''}#/${u.view}`;

@@ -1,6 +1,6 @@
 import { useData } from '../app/data';
 import { euBand, usBand } from '../lib/air';
-import { moonPhase, nextPhase, phaseName, sunEvents } from '../lib/astro';
+import { moonPhase, nextPhase, phaseName, polarDay } from '../lib/astro';
 import { clockLabel } from '../lib/units';
 
 const DAY = 864e5;
@@ -10,7 +10,7 @@ export function AirRail() {
   if (!place || !forecast) return null;
   const today = forecast.days[0];
   const now = Date.now();
-  const polar = sunEvents(now, place.lat, place.lon).polar;
+  const polar = today ? polarDay(today.daylight) : null; // same calendar day as the rise/set times
   const ph = moonPhase(now);
   const days = (t: number) => Math.round((t - now) / DAY);
   const uvNow = forecast.hours.find((h) => h.ms <= now && h.ms + 3600e3 > now)?.uv;

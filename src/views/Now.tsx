@@ -9,8 +9,8 @@ import { capitalise, clockLabel, fmtTemp, fmtWind, weatherWords, weekday } from 
 const SPAN = 24;
 
 function useHours() {
-  const { forecast } = useData();
-  return useMemo(() => (forecast ? hourColumns(forecast, Date.now(), SPAN) : []), [forecast]);
+  const { forecast, now } = useData();
+  return useMemo(() => (forecast ? hourColumns(forecast, now, SPAN) : []), [forecast, now]);
 }
 
 export function NowDial() {

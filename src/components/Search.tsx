@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { useData } from '../app/data';
 import { geocode } from '../lib/openmeteo';
+import { pickOption } from '../lib/search';
 import type { Place } from '../lib/types';
 
 const label = (p: Place) => [p.name, p.region, p.country].filter(Boolean).join(', ');
@@ -9,6 +10,7 @@ export function Search() {
   const { setPlace, locate } = useData();
   const [q, setQ] = useState('');
   const [options, setOptions] = useState<Place[]>([]);
+  const [optionsTerm, setOptionsTerm] = useState(''); // the text the suggestions belong to
   const [active, setActive] = useState(-1);
   const [message, setMessage] = useState('');
   const input = useRef<HTMLInputElement>(null);
@@ -19,7 +21,7 @@ export function Search() {
     if (term.length < 2) { setOptions([]); return; }
     const ac = new AbortController();
     const t = setTimeout(() => {
-      geocode(term, ac.signal).then((r) => { setOptions(r); setActive(-1); setMessage(''); }).catch(() => {});
+      geocode(term, ac.signal).then((r) => { setOptions(r); setOptionsTerm(term); setActive(-1); setMessage(''); }).catch(() => {});
     }, 250);
     return () => { clearTimeout(t); ac.abort(); };
   }, [q]);
@@ -38,7 +40,7 @@ export function Search() {
   async function submit() {
     const term = q.trim();
     if (!term) return;
-    const pick = options[active] ?? options[0];
+    const pick = pickOption(options, optionsTerm, q, active);
     if (pick) return choose(pick);
     const found = await geocode(term).catch(() => null);
     if (found === null) return setMessage('Place search is unavailable right now.');

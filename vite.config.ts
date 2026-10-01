@@ -2,14 +2,37 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import type { Plugin } from 'vite';
+
+// The stylesheet is small (tokens, layout, @font-face); inlining it removes the one
+// render-blocking request before first paint. Fonts still load from their own files.
+const inlineCss = (): Plugin => ({
+  name: 'celestial-inline-css',
+  apply: 'build',
+  enforce: 'post',
+  generateBundle(_, bundle) {
+    const html = bundle['index.html'];
+    if (!html || html.type !== 'asset') return;
+    let source = String(html.source);
+    for (const [name, chunk] of Object.entries(bundle)) {
+      if (chunk.type !== 'asset' || !name.endsWith('.css') || !source.includes(name)) continue;
+      const tag = new RegExp(`<link rel="stylesheet"[^>]*href="/${name.replace(/[.]/g, '\\.')}"[^>]*>`);
+      source = source.replace(tag, `<style>${String(chunk.source)}</style>`);
+      delete bundle[name];
+    }
+    html.source = source;
+  },
+});
 
 const COBALT = '#1b3a9c';
 
 export default defineConfig({
   plugins: [
     react(),
+    inlineCss(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: 'script-defer', // keep the registration script out of the render path
       includeAssets: ['icons/favicon.svg'],
       manifest: {
         name: 'Celestial',

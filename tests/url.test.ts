@@ -8,6 +8,8 @@ it('round-trips names with accents and non-Latin scripts', () => {
   roundTrip({ q: '東京', view: 'now', t: 0 });
 });
 it('round-trips coordinates', () => roundTrip({ at: { lat: -33.87, lon: 151.21 }, view: 'radar', t: 0 }));
+it('keeps both the name and the coordinates, so same-named places stay distinct', () =>
+  roundTrip({ q: 'Springfield', at: { lat: 39.8, lon: -89.64 }, view: 'now', t: 0 }));
 it('falls back to the Now view for an unknown hash', () => expect(parseUrl('/?q=x#/nope').view).toBe('now'));
 it('clamps the cursor into the 36-hour window', () => {
   expect(parseUrl('/?q=x&t=99').t).toBe(35);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clockLabel, compass, fmtTemp, fmtWind, localIso, toUnit, weekday } from '../src/lib/units';
+import { clockLabel, compass, fmtTemp, fmtWind, offsetAt, toUnit, weekday, zonedIso } from '../src/lib/units';
 
 describe('units', () => {
   it('converts celsius to fahrenheit', () => {
@@ -22,8 +22,15 @@ describe('units', () => {
     expect(clockLabel('2026-10-01T07:00')).toBe('07:00');
     expect(weekday('2026-10-01T07:00')).toBe('Thu');
   });
-  it('gives a place’s local wall-clock time from a UTC instant and its offset', () => {
-    expect(localIso(Date.UTC(2026, 9, 1, 1, 7), 20700)).toBe('2026-10-01T06:52');   // Kathmandu +05:45
-    expect(localIso(Date.UTC(2026, 9, 1, 1, 7), -36000)).toBe('2026-09-30T15:07');  // Honolulu −10:00
+  it('gives a place’s true wall-clock time, across a daylight-saving change', () => {
+    expect(zonedIso(Date.UTC(2026, 9, 1, 1, 7), 'Asia/Kathmandu')).toBe('2026-10-01T06:52');
+    expect(zonedIso(Date.UTC(2026, 9, 1, 1, 7), 'Pacific/Honolulu')).toBe('2026-09-30T15:07');
+    expect(zonedIso(Date.UTC(2026, 9, 3, 15), 'Australia/Sydney')).toBe('2026-10-04T01:00'); // AEST
+    expect(zonedIso(Date.UTC(2026, 9, 3, 16), 'Australia/Sydney')).toBe('2026-10-04T03:00'); // AEDT: 02:00 never happens
+    expect(zonedIso(Date.UTC(2026, 9, 1, 0, 0), 'Asia/Tokyo')).toBe('2026-10-01T09:00');
+  });
+  it('knows the offset in force at an instant', () => {
+    expect(offsetAt(Date.UTC(2026, 9, 3, 15), 'Australia/Sydney')).toBe(36000);
+    expect(offsetAt(Date.UTC(2026, 9, 3, 16), 'Australia/Sydney')).toBe(39600);
   });
 });

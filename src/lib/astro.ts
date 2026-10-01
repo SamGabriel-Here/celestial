@@ -94,6 +94,10 @@ export function sunEvents(ms: number, lat: number, lon: number): { rise: number 
   return { rise, set, polar };
 }
 
+/** Polar night or midnight sun for a calendar day, from that day's daylight in seconds. */
+export const polarDay = (daylightSec: number): 'day' | 'night' | null =>
+  daylightSec <= 0 ? 'night' : daylightSec >= 86399 ? 'day' : null;
+
 // The brightest stars (J2000): name, right ascension in hours, declination in degrees, magnitude.
 export const STARS: readonly Star[] = [
   ['Sirius', 6.752, -16.716, -1.46], ['Canopus', 6.399, -52.696, -0.74], ['Arcturus', 14.261, 19.182, -0.05],

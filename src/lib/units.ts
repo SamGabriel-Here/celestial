@@ -34,5 +34,17 @@ const WMO: Record<number, string> = {
 /** WMO weather code in lower-case words ("light rain"). */
 export const weatherWords = (code: number): string => WMO[code] ?? 'unsettled';
 export const capitalise = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
-/** The place's local wall-clock time ("2026-10-01T06:52") for a UTC instant. */
-export const localIso = (ms: number, offsetSec: number): string => new Date(ms + offsetSec * 1000).toISOString().slice(0, 16);
+const zoneFormats = new Map<string, Intl.DateTimeFormat>();
+/** The place's real wall-clock time ("2026-10-01T06:52") for a UTC instant, DST included. */
+export function zonedIso(ms: number, timeZone: string): string {
+  let f = zoneFormats.get(timeZone);
+  if (!f) {
+    f = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+    zoneFormats.set(timeZone, f);
+  }
+  const p = Object.fromEntries(f.formatToParts(ms).map((x) => [x.type, x.value]));
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
+}
+/** Seconds east of UTC in force at an instant. */
+export const offsetAt = (ms: number, timeZone: string): number =>
+  Math.round((Date.parse(zonedIso(ms, timeZone) + 'Z') - Math.floor(ms / 60e3) * 60e3) / 1000);

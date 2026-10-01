@@ -101,8 +101,9 @@ button { cursor: pointer; }
 .dial { position: relative; width: var(--dial); aspect-ratio: 1; }
 .dial-window { position: absolute; inset: 17%; border-radius: 50%; overflow: hidden; background: var(--card-deep); }
 .dial-window canvas { display: block; width: 100%; height: 100%; animation: develop 700ms ease-out both; }
-.dial-rim { position: absolute; inset: 0; width: 100%; height: 100%; cursor: grab; touch-action: none; overflow: visible; }
-.dial-rim:active { cursor: grabbing; }
+.dial-rim { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.dial-rim .grip { fill: none; stroke: transparent; pointer-events: stroke; touch-action: none; cursor: grab; }
+.dial-rim .grip:active { cursor: grabbing; }
 .dial-rim:focus-visible { outline: none; }
 .dial-rim:focus-visible .ring-outer { stroke: var(--sun); stroke-width: 3; }
 .ring-window { fill: none; stroke: var(--print); stroke-width: 3; }
@@ -162,7 +163,7 @@ button { cursor: pointer; }
   .temp { font-size: clamp(88px, 9vw, 120px); }
 }
 
-/* ---------- phone: dial, then reading, then details ---------- */
+/* ---------- phone: reading, then dial, then details ---------- */
 @media (max-width: 980px) {
   :root { --dial: min(calc(100vw - 32px), 560px); }
   .top { grid-template-columns: 1fr auto; padding: 14px 16px; }

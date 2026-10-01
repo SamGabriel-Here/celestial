@@ -1,16 +1,16 @@
 import type { ReactNode } from 'react';
 import { useData } from '../app/data';
 import { outlook } from '../lib/outlook';
-import { capitalise, clockLabel, compass, fmtTemp, fmtWind, localIso, weatherWords, weekday } from '../lib/units';
+import { capitalise, clockLabel, compass, fmtTemp, fmtWind, weatherWords, weekday, zonedIso } from '../lib/units';
 
 /** The left column: the place, the temperature, and the answer — the two-second read. */
 export function Reading({ children }: { children?: ReactNode }) {
-  const { place, forecast, status, error, notice, settings, setUnit, toggleSave, retry } = useData();
+  const { place, forecast, status, stale, now: tick, error, notice, settings, setUnit, toggleSave, retry } = useData();
   const u = settings.unit;
   const saved = !!place && settings.saved.some((p) => p.id === place.id);
   const f = forecast && place && forecast.place.id === place.id ? forecast : null;
-  const now = f ? localIso(Date.now(), f.offsetSec) : '';
-  const ans = f ? outlook(f, Date.now()) : '';
+  const now = f ? zonedIso(tick, f.timezone) : '';
+  const ans = f ? outlook(f, tick) : '';
   const [head, ...rest] = ans.split(', ');
 
   return (
@@ -22,7 +22,7 @@ export function Reading({ children }: { children?: ReactNode }) {
           <button type="button" className="chip" aria-pressed={saved} onClick={() => toggleSave(place)}>{saved ? 'Saved' : 'Save'}</button>
         </div>
       )}
-      {f && <p className="when">{weekday(now)} · {clockLabel(now)} local{status === 'offline' && <b> · as of {clockLabel(f.asOf)}</b>}</p>}
+      {f && <p className="when">{weekday(now)} · {clockLabel(now)} local{(status === 'offline' || stale) && <b> · as of {clockLabel(f.asOf)}</b>}</p>}
       {!f && status === 'loading' && <p className="quiet">Reading the sky…</p>}
       {!f && status === 'error' && (
         <div className="error" role="alert">

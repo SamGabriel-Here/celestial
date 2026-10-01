@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { forecastUrl, parseAir, parseBatchCurrent, parseForecast, parseGeocode } from '../src/lib/openmeteo';
 import type { Place } from '../src/lib/types';
 import tokyo from './fixtures/tokyo.json';
+import sydney from './fixtures/sydney.json';
 import honolulu from './fixtures/honolulu.json';
 import kathmandu from './fixtures/kathmandu.json';
 import springfield from './fixtures/geocode-springfield.json';
@@ -37,6 +38,23 @@ describe('parseForecast', () => {
     const h = parseForecast(j, place).hours[5]!;
     expect(h.pop).toBeNull();
     expect(h.freeze).toBeNull();
+  });
+});
+
+describe('daylight-saving changes', () => {
+  // Open-Meteo prints "local" time as UTC plus one fixed offset, so after a DST change its
+  // strings are an hour out. Labels must come from the instant in the place's real zone.
+  const f = parseForecast(sydney, { id: '-33.87,151.21', name: 'Sydney', country: 'AU', lat: -33.87, lon: 151.21 });
+  it('labels hours by the true local clock', () => {
+    expect(f.timezone).toBe('Australia/Sydney');
+    expect(f.hours.find((h) => h.ms === Date.UTC(2026, 9, 3, 16))?.iso).toBe('2026-10-04T03:00');
+    expect(f.hours.some((h) => h.iso === '2026-10-04T02:00')).toBe(false);
+  });
+  it('gives sunrise in the true local clock', () => {
+    expect(f.days.find((d) => d.iso === '2026-10-04')?.rise).toBe('2026-10-04T06:28');
+  });
+  it('keeps the observation instant for staleness checks', () => {
+    expect(f.asOfMs).toBe(Date.parse(sydney.current.time + 'Z') - sydney.utc_offset_seconds * 1000);
   });
 });
 

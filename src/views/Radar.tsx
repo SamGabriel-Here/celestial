@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useData } from '../app/data';
 import { Dial, type Segment } from '../dial/Dial';
 import { fetchFrames, rainColour, rainIntensity, type Frame } from '../lib/rainviewer';
-import { clockLabel, localIso } from '../lib/units';
+import { clockLabel, zonedIso } from '../lib/units';
 
 const FRAME_MS = 600;
 const RADAR_OPACITY = 0.95;
@@ -84,8 +84,7 @@ export function RadarDial() {
     return () => clearInterval(t);
   }, [playing, frames.length]);
 
-  const off = forecast?.offsetSec ?? 0;
-  const time = (f: Frame) => clockLabel(localIso(f.time, off));
+  const time = (f: Frame) => clockLabel(zonedIso(f.time, forecast?.timezone ?? 'UTC'));
   const segments: Segment[] = frames.length
     ? frames.map((f, k) => ({ key: String(f.time), top: time(f).slice(0, 2), bottom: time(f).slice(2), mark: k === frames.length - 1 }))
     : [{ key: 'wait', top: '', bottom: '' }];

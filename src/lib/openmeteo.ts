@@ -1,4 +1,5 @@
 import type { Air, Day, Forecast, Hour, Place, Quarter } from './types';
+import { zonedIso } from './units';
 
 const FORECAST = 'https://api.open-meteo.com/v1/forecast';
 const AIR = 'https://air-quality-api.open-meteo.com/v1/air-quality';
@@ -13,6 +14,7 @@ type N = number | null;
 type Series = Record<string, N[] | string[]>;
 interface RawForecast {
   utc_offset_seconds: number;
+  timezone?: string;
   current: Record<string, number | null> & { time?: string };
   hourly: Series & { time: string[] };
   minutely_15: Series & { time: string[] };
@@ -42,25 +44,30 @@ const opt = (s: Series, k: string, i: number) => (s[k]?.[i] as N) ?? null;
 export function parseForecast(json: unknown, place: Place): Forecast {
   const j = json as RawForecast;
   const off = j.utc_offset_seconds;
+  const tz = j.timezone ?? 'UTC';
+  // Open-Meteo prints local time as UTC plus one fixed offset, which is an hour out after a
+  // daylight-saving change. Its strings give the true instant; labels are re-derived in the zone.
   const toMs = (iso: string) => Date.parse(iso + 'Z') - off * 1000;
+  const local = (iso: string) => zonedIso(toMs(iso), tz);
   const H = j.hourly, Q = j.minutely_15, D = j.daily, c = j.current;
-  const hours: Hour[] = H.time.map((iso, i) => ({
-    ms: toMs(iso), iso, temp: req(H, 'temperature_2m', i), pop: opt(H, 'precipitation_probability', i),
+  const hours: Hour[] = H.time.map((raw, i) => ({
+    ms: toMs(raw), iso: local(raw), temp: req(H, 'temperature_2m', i), pop: opt(H, 'precipitation_probability', i),
     mm: req(H, 'precipitation', i), code: req(H, 'weather_code', i), low: req(H, 'cloud_cover_low', i),
     mid: req(H, 'cloud_cover_mid', i), high: req(H, 'cloud_cover_high', i), wind: req(H, 'wind_speed_10m', i),
     gust: req(H, 'wind_gusts_10m', i), dir: req(H, 'wind_direction_10m', i), uv: opt(H, 'uv_index', i),
     freeze: opt(H, 'freezing_level_height', i),
   }));
-  const quarters: Quarter[] = Q.time.map((iso, i) => ({ ms: toMs(iso), iso, mm: req(Q, 'precipitation', i) }));
+  const quarters: Quarter[] = Q.time.map((raw, i) => ({ ms: toMs(raw), iso: local(raw), mm: req(Q, 'precipitation', i) }));
   const days: Day[] = D.time.map((iso, i) => ({
     iso, code: req(D, 'weather_code', i), max: req(D, 'temperature_2m_max', i), min: req(D, 'temperature_2m_min', i),
     mm: req(D, 'precipitation_sum', i), pop: opt(D, 'precipitation_probability_max', i), uv: opt(D, 'uv_index_max', i),
-    rise: (D.sunrise?.[i] as string | undefined) ?? null, set: (D.sunset?.[i] as string | undefined) ?? null,
+    rise: D.sunrise?.[i] ? local(D.sunrise[i] as string) : null, set: D.sunset?.[i] ? local(D.sunset[i] as string) : null,
     daylight: req(D, 'daylight_duration', i),
   }));
   const n = (k: string) => c[k] ?? 0;
   return {
-    place, offsetSec: off, fetchedAt: Date.now(), asOf: c.time ?? H.time[0] ?? '', hours, quarters, days,
+    place, offsetSec: off, timezone: tz, fetchedAt: Date.now(),
+    asOf: local(c.time ?? H.time[0] ?? ''), asOfMs: toMs(c.time ?? H.time[0] ?? ''), hours, quarters, days,
     current: { temp: n('temperature_2m'), feels: n('apparent_temperature'), rh: n('relative_humidity_2m'),
       code: n('weather_code'), cloud: n('cloud_cover'), wind: n('wind_speed_10m'), gust: n('wind_gusts_10m'),
       dir: n('wind_direction_10m'), mm: n('precipitation'), pressure: n('pressure_msl') },
