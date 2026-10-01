@@ -121,3 +121,13 @@ button { cursor: pointer; }
 .summary { font: 400 17px/1.4 var(--sans); }
 .week li.day > span:nth-child(2) { display: grid; }
 .week li small { color: var(--ink-2); font-size: 12px; }
+
+/* ---------- radar ---------- */
+.radar { position: absolute; inset: 0; display: grid; grid-template-rows: 1fr auto; }
+.radar-map { min-height: 0; background: var(--paper); }
+.radar-controls { display: flex; align-items: center; gap: 14px; padding: 10px 16px; border-top: 1px solid var(--rule); background: var(--paper); font-size: 14px; }
+.radar-controls input[type='range'] { flex: 1; accent-color: var(--ink); }
+.panel-wait { padding: 24px; }
+.leaflet-container { font: 400 12px var(--sans); }
+.leaflet-bar a { color: var(--ink); }
+.leaflet-tile-container img.leaflet-tile { width: 256.6px !important; height: 256.6px !important; } /* hide sub-pixel tile seams */
