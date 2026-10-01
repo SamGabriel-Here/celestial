@@ -58,6 +58,8 @@ button { cursor: pointer; }
   align-items: start; padding: 8px clamp(16px, 3vw, 40px) 40px; min-height: calc(100dvh - 84px); }
 /* The dial and the reading hold still while a long list scrolls beside them. */
 .dial-col, .reading { position: sticky; top: 16px; }
+/* Reserve the dial's box before the forecast arrives, so nothing below it jumps. */
+.dial-col { width: var(--dial); min-height: calc(var(--dial) + 48px); }
 
 .reading { display: grid; gap: 6px; align-content: start; padding-top: 6vh; }
 .reading .place-row { display: flex; align-items: baseline; gap: 14px; }

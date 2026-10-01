@@ -90,6 +90,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     (async () => {
       if (url.q) {
         if (place?.name === url.q) return;
+        // Reopening the last place: skip the search round trip so the forecast starts at once.
+        if (settings.last?.name === url.q) return setPlaceState(settings.last);
         try {
           const [p] = await geocode(url.q, ac.signal);
           if (ac.signal.aborted) return;

@@ -46,7 +46,7 @@ function Card() {
           {forecast && (v === 'now' ? <NowDetails /> : v === 'days' ? <DaysDetails /> : v === 'air' ? <AirRail /> : (
             <p className="quiet small">Radar shows the last two hours in ten-minute frames. Brighter blue is heavier rain. The yellow ring is the place.</p>
           ))}
-          <Places />
+          {forecast && <Places />}
         </aside>
       </main>
     </>
