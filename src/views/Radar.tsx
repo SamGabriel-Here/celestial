@@ -3,12 +3,39 @@ import 'leaflet/dist/leaflet.css';
 import { useEffect, useRef, useState } from 'react';
 import { useData } from '../app/data';
 import { Dial, type Segment } from '../dial/Dial';
-import { fetchFrames, type Frame } from '../lib/rainviewer';
+import { fetchFrames, rainColour, rainIntensity, type Frame } from '../lib/rainviewer';
 import { clockLabel, localIso } from '../lib/units';
 
 const FRAME_MS = 600;
 const RADAR_OPACITY = 0.8;
 const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas';
+
+/** Radar tiles repainted from RainViewer's palette into the card's: rain blue to print white. */
+class RadarLayer extends L.GridLayer {
+  constructor(private url: string, options: L.GridLayerOptions) { super(options); }
+  createTile(coords: L.Coords, done: L.DoneCallback): HTMLElement {
+    const tile = document.createElement('canvas');
+    tile.width = tile.height = 256;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const g = tile.getContext('2d', { willReadFrequently: true })!;
+      g.drawImage(img, 0, 0);
+      const data = g.getImageData(0, 0, 256, 256);
+      const p = data.data;
+      for (let i = 0; i < p.length; i += 4) {
+        if (!p[i + 3]) continue;
+        const [r, gg, b, a] = rainColour(rainIntensity(p[i]!, p[i + 1]!, p[i + 2]!));
+        p[i] = r; p[i + 1] = gg; p[i + 2] = b; p[i + 3] = Math.round((a * p[i + 3]!) / 255);
+      }
+      g.putImageData(data, 0, 0);
+      done(undefined, tile);
+    };
+    img.onerror = () => done(new Error('Radar tile unavailable'), tile);
+    img.src = L.Util.template(this.url, coords as unknown as Record<string, number>);
+    return tile;
+  }
+}
 
 /** Radar in the dial's window; the rim holds the last two hours of frames. */
 export function RadarDial() {
@@ -16,7 +43,7 @@ export function RadarDial() {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const pin = useRef<L.CircleMarker | null>(null);
-  const layers = useRef<L.TileLayer[]>([]);
+  const layers = useRef<L.GridLayer[]>([]);
   const [frames, setFrames] = useState<Frame[]>([]);
   const [idx, setIdx] = useState(0);
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -35,7 +62,7 @@ export function RadarDial() {
     fetchFrames().then((fs) => {
       if (!live) return;
       if (!fs.length) return setFailed(true);
-      layers.current = fs.map((f) => L.tileLayer(f.url, { opacity: 0, maxNativeZoom: 7, maxZoom: 10 }).addTo(m));
+      layers.current = fs.map((f) => new RadarLayer(f.url, { opacity: 0, maxNativeZoom: 7, maxZoom: 10 }).addTo(m));
       setFrames(fs);
       setIdx(fs.length - 1);
     }).catch(() => live && setFailed(true));

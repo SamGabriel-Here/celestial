@@ -19,3 +19,27 @@ export async function fetchFrames(): Promise<Frame[]> {
   if (!r.ok) throw new Error('Radar unavailable');
   return parseFrames(await r.json());
 }
+
+/**
+ * RainViewer's palette runs pale cyan (light rain) → deep blue (heavier) → yellow, orange, red
+ * (downpour) → magenta (extreme). Rank a pixel along that ramp, 0..1.
+ */
+export function rainIntensity(r: number, g: number, b: number): number {
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  if (b >= r && b >= g * 0.6) {
+    // The blue ramp: the darker the blue, the heavier the rain.
+    const light = (max + min) / 510; // 0..1
+    return Math.min(0.6, Math.max(0.1, 0.1 + (0.75 - light) * 1.1));
+  }
+  if (r > g && b > g) return 1; // magenta: extreme
+  // Warm end: yellow (hue ≈ 55°) → red (0°).
+  const hue = max === min ? 0 : 60 * ((g - b) / (max - min));
+  return Math.min(0.98, 0.7 + 0.28 * (1 - Math.max(0, Math.min(60, hue)) / 60));
+}
+
+/** Rain blue at the light end to print white at the heavy end; RGBA, alpha 0..255. */
+export function rainColour(i: number): [number, number, number, number] {
+  const t = Math.max(0, Math.min(1, i));
+  const mix = (a: number, b: number) => Math.round(a + (b - a) * t);
+  return [mix(160, 243), mix(205, 245), mix(255, 251), Math.round(255 * (0.4 + 0.6 * t))];
+}

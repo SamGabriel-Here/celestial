@@ -11,13 +11,16 @@ export function RainTimeline({ quarters }: { quarters: Quarter[] }) {
   return (
     <section className="rain2h" aria-label={`Rain, next two hours: ${summary}`}>
       <h2>Next two hours</h2>
-      <div className="bars" aria-hidden="true">
-        {q.map((x) => <span key={x.iso} style={{ height: `${x.mm ? Math.max(8, (x.mm / max) * 100) : 0}%` }} />)}
-      </div>
-      <div className="ticks mono" aria-hidden="true">
-        <span>{clockLabel(q[0]!.iso)}</span><span>{clockLabel(q[4]?.iso ?? q[0]!.iso)}</span><span>{clockLabel(q[q.length - 1]!.iso)}</span>
-      </div>
-      {dry && <p className="quiet small">No rain expected.</p>}
+      {dry ? <p className="quiet small">No rain expected.</p> : (
+        <>
+          <div className="bars" aria-hidden="true">
+            {q.map((x) => <span key={x.iso} style={{ height: `${x.mm ? Math.max(8, (x.mm / max) * 100) : 0}%` }} />)}
+          </div>
+          <div className="ticks mono" aria-hidden="true">
+            <span>{clockLabel(q[0]!.iso)}</span><span>{clockLabel(q[4]?.iso ?? q[0]!.iso)}</span><span>{clockLabel(q[q.length - 1]!.iso)}</span>
+          </div>
+        </>
+      )}
     </section>
   );
 }

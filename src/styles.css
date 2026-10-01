@@ -43,7 +43,7 @@ button { cursor: pointer; }
 .search input::placeholder { color: var(--print-2); }
 .search input:focus-visible { outline: none; }
 .search form:focus-within { border-bottom-color: var(--sun); }
-.search form button { background: none; border: 0; color: var(--sun); font: 500 13px var(--sans); letter-spacing: .2em; text-transform: uppercase; }
+.search form button { background: none; border: 0; color: var(--print); font: 500 13px var(--sans); letter-spacing: .2em; text-transform: uppercase; }
 .options { position: absolute; z-index: 1000; left: 0; right: 0; top: 44px; list-style: none; padding: 6px 0; background: var(--card-deep);
   border: 1px solid var(--line); box-shadow: 0 14px 40px rgb(5 12 40 / .5); }
 .options li { padding: 9px 14px; font-size: 15px; cursor: pointer; }
@@ -83,7 +83,7 @@ button { cursor: pointer; }
 .at { display: grid; grid-template-columns: auto 1fr; gap: 6px 18px; font-size: 16px; }
 .at dt { color: var(--print-2); }
 .at dd { font-variant-numeric: tabular-nums; }
-.at .when { grid-column: 1 / -1; font: 400 32px/1 var(--sans); margin-bottom: 8px; }
+.details h2.moment { font: 400 32px/1 var(--sans); letter-spacing: 0; text-transform: none; color: var(--print); margin-bottom: 14px; }
 .list { list-style: none; padding: 0; }
 .list li { display: grid; grid-template-columns: 4em 1fr auto; gap: 12px; align-items: baseline; padding: 8px 0; border-top: 1px solid var(--line-soft); font-size: 15px; }
 .list li > :first-child { color: var(--print-2); }
@@ -162,7 +162,11 @@ button { cursor: pointer; }
     padding: 8px 4px calc(8px + env(safe-area-inset-bottom)); background: var(--card-deep); border-top: 1px solid var(--line); }
   .tabs a { font-size: 14px; padding: 8px 10px; }
   .stage { grid-template-columns: 1fr; padding: 0 16px 96px; gap: 28px; }
-  .dial-col { order: -1; justify-self: center; position: static; }
+  .dial-col { justify-self: center; position: static; }
+  /* The rim is drawn in 1000 units; on a phone that makes 15/20 unreadable, so enlarge and re-space. */
+  .label .top { font-size: 24px; transform: translateY(-10px); }
+  .label .bottom { font-size: 32px; transform: translateY(10px); }
+  .label .mark { transform: translateY(-16px); }
   .reading, .details { position: static; padding-top: 0; }
   .temp { font-size: 104px; }
 }

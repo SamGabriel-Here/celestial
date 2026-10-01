@@ -14,7 +14,7 @@ function useHours() {
 }
 
 export function NowDial() {
-  const { place, settings, url, setUrl } = useData();
+  const { place, forecast, settings, url, setUrl } = useData();
   const cols = useHours();
   const u = settings.unit;
   const onIndex = useCallback((t: number) => setUrl({ t }), [setUrl]);
@@ -23,10 +23,11 @@ export function NowDial() {
   const c = cols[i]!;
   const maxMm = Math.max(1, ...cols.map((x) => x.mm));
   const segments: Segment[] = cols.map((x, k) => ({
-    key: x.iso, top: x.label.slice(0, 2), bottom: fmtTemp(x.temp, u), mark: k === 0,
+    // The current hour shows the current reading, so the rim agrees with the big number.
+    key: x.iso, top: x.label.slice(0, 2), bottom: fmtTemp(k === 0 && forecast ? forecast.current.temp : x.temp, u), mark: k === 0,
     ...((x.pop ?? 0) >= 10 || x.mm > 0 ? { spoke: Math.max(0.001, x.mm / maxMm), spokeAlpha: (x.pop ?? 50) / 100 } : {}),
   }));
-  const text = `${clockLabel(c.iso)}, ${fmtTemp(c.temp, u)}, ${weatherWords(c.code)}, ${c.pop ?? 'unknown'}% chance of rain`;
+  const text = `${clockLabel(c.iso)}, ${fmtTemp(i === 0 && forecast ? forecast.current.temp : c.temp, u)}, ${weatherWords(c.code)}, ${c.pop ?? 'unknown'}% chance of rain`;
   return (
     <>
       <Dial segments={segments} index={i} onIndex={onIndex} label="Turn the wheel to see another hour" valueText={text}>
@@ -48,11 +49,10 @@ export function NowDetails() {
   return (
     <>
       <section>
-        <h2>{url.t ? 'On the wheel' : 'This hour'}</h2>
+        <h2 className="moment">{weekday(c.iso)} {clockLabel(c.iso)}</h2>
         <dl className="at">
-          <dt className="when">{weekday(c.iso)} {clockLabel(c.iso)}</dt>
           <dt>Sky</dt><dd>{capitalise(weatherWords(c.code))}</dd>
-          <dt>Temperature</dt><dd>{fmtTemp(c.temp, u)}</dd>
+          <dt>Temperature</dt><dd>{fmtTemp(url.t === 0 ? forecast.current.temp : c.temp, u)}</dd>
           <dt>Rain</dt><dd>{c.pop ?? '—'}% chance{c.mm >= 0.1 ? `, ${c.mm.toFixed(1)} mm` : ''}</dd>
           <dt>Cloud</dt><dd>low {c.low}% · mid {c.mid}% · high {c.high}%</dd>
           <dt>Wind</dt><dd>{fmtWind(c.wind)}</dd>

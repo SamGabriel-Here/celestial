@@ -28,6 +28,11 @@ export function drawSky(canvas: HTMLCanvasElement, o: SkyOpts): void {
     const r = ((90 - alt) / 90) * R, a = (az * Math.PI) / 180;
     return [c - r * Math.sin(a), c - r * Math.cos(a)];
   };
+  // Bodies near the horizon are drawn just inside the rim so the window never cuts them.
+  const body = (alt: number, az: number, r: number): [number, number] => {
+    const [x, y] = at(alt, az), d = Math.hypot(x - c, y - c), max = R - r - 2;
+    return d > max ? [c + ((x - c) * max) / d, c + ((y - c) * max) / d] : [x, y];
+  };
   const sun = sunPosition(o.ms, o.lat, o.lon);
   const moon = moonPosition(o.ms, o.lat, o.lon);
   const cloud = Math.max(o.low, o.mid, o.high);
@@ -71,14 +76,14 @@ export function drawSky(canvas: HTMLCanvasElement, o: SkyOpts): void {
   g.stroke(); g.setLineDash([]);
 
   if (sun.alt > -1) {
-    const [x, y] = at(Math.max(0, sun.alt), sun.az);
+    const [x, y] = body(Math.max(0, sun.alt), sun.az, Math.max(7, R * 0.035));
     const halo = g.createRadialGradient(x, y, 2, x, y, R * 0.24);
     halo.addColorStop(0, 'rgba(255,236,190,.95)'); halo.addColorStop(1, 'rgba(255,236,190,0)');
     g.fillStyle = halo; g.beginPath(); g.arc(x, y, R * 0.24, 0, Math.PI * 2); g.fill();
     g.fillStyle = '#fff6dc'; g.beginPath(); g.arc(x, y, Math.max(7, R * 0.035), 0, Math.PI * 2); g.fill();
   }
   if (moon.alt > 0) {
-    const [x, y] = at(moon.alt, moon.az);
+    const [x, y] = body(moon.alt, moon.az, Math.max(7, R * 0.035));
     drawMoon(g, x, y, Math.max(7, R * 0.035), moonPhase(o.ms).phase, o.lat < 0, sun.alt > 0);
   }
 

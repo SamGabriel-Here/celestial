@@ -1,5 +1,5 @@
-import { expect, it } from 'vitest';
-import { parseFrames } from '../src/lib/rainviewer';
+import { describe, expect, it } from 'vitest';
+import { parseFrames, rainColour, rainIntensity } from '../src/lib/rainviewer';
 import fixture from './fixtures/rainviewer.json';
 
 it('lists every past radar frame as a tile URL template, oldest first', () => {
@@ -12,4 +12,23 @@ it('lists every past radar frame as a tile URL template, oldest first', () => {
 it('returns no frames for an unexpected response', () => {
   expect(parseFrames({})).toEqual([]);
   expect(parseFrames(null)).toEqual([]);
+});
+
+describe('repainting radar in the world’s palette', () => {
+  const PALE = [136, 221, 238] as const, DEEP = [0, 98, 149] as const, YELLOW = [255, 238, 0] as const, RED = [255, 0, 0] as const;
+  it('ranks RainViewer’s colours from light rain to downpour', () => {
+    expect(rainIntensity(...PALE)).toBeLessThan(rainIntensity(...DEEP));
+    expect(rainIntensity(...DEEP)).toBeLessThan(rainIntensity(...YELLOW));
+    expect(rainIntensity(...YELLOW)).toBeLessThan(rainIntensity(...RED));
+    expect(rainIntensity(...RED)).toBeLessThanOrEqual(1);
+    expect(rainIntensity(...PALE)).toBeGreaterThan(0);
+  });
+  it('paints every intensity in rain blue to print white, never yellow', () => {
+    for (const c of [PALE, DEEP, YELLOW, RED]) {
+      const [r, , b, a] = rainColour(rainIntensity(c[0], c[1], c[2]));
+      expect(b).toBeGreaterThanOrEqual(r);
+      expect(a).toBeGreaterThan(0);
+    }
+    expect(rainColour(1)[3]).toBeGreaterThan(rainColour(0.1)[3]);
+  });
 });

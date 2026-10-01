@@ -47,9 +47,8 @@ export function DaysDetails() {
   return (
     <>
       <section>
-        <h2>{i ? 'On the wheel' : 'Today'}</h2>
+        <h2 className="moment">{i ? `${weekday(c.iso)} ${dateOf(c.iso)}` : `Today, ${weekday(c.iso)} ${dateOf(c.iso)}`}</h2>
         <dl className="at">
-          <dt className="when">{weekday(c.iso)} {dateOf(c.iso)}</dt>
           <dt>Sky</dt><dd>{capitalise(weatherWords(c.code))}</dd>
           <dt>High · low</dt><dd>{fmtTemp(c.temp, u)} · {fmtTemp(c.tempMin ?? c.temp, u)}</dd>
           <dt>Rain</dt><dd>{c.mm >= 0.1 ? `${c.mm.toFixed(1)} mm` : 'dry'}{c.pop != null ? `, ${c.pop}% chance` : ''}</dd>
