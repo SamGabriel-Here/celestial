@@ -34,3 +34,5 @@ const WMO: Record<number, string> = {
 /** WMO weather code in lower-case words ("light rain"). */
 export const weatherWords = (code: number): string => WMO[code] ?? 'unsettled';
 export const capitalise = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
+/** The place's local wall-clock time ("2026-10-01T06:52") for a UTC instant. */
+export const localIso = (ms: number, offsetSec: number): string => new Date(ms + offsetSec * 1000).toISOString().slice(0, 16);

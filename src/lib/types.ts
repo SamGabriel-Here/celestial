@@ -63,6 +63,7 @@ export interface Forecast {
   place: Place;
   offsetSec: number;
   fetchedAt: number;
+  asOf: string; // local ISO of the API's current observation
   current: Current;
   hours: Hour[];
   quarters: Quarter[];

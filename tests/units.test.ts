@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clockLabel, compass, fmtTemp, fmtWind, toUnit, weekday } from '../src/lib/units';
+import { clockLabel, compass, fmtTemp, fmtWind, localIso, toUnit, weekday } from '../src/lib/units';
 
 describe('units', () => {
   it('converts celsius to fahrenheit', () => {
@@ -21,5 +21,9 @@ describe('units', () => {
   it('reads the clock and weekday straight from the local ISO string', () => {
     expect(clockLabel('2026-10-01T07:00')).toBe('07:00');
     expect(weekday('2026-10-01T07:00')).toBe('Thu');
+  });
+  it('gives a place’s local wall-clock time from a UTC instant and its offset', () => {
+    expect(localIso(Date.UTC(2026, 9, 1, 1, 7), 20700)).toBe('2026-10-01T06:52');   // Kathmandu +05:45
+    expect(localIso(Date.UTC(2026, 9, 1, 1, 7), -36000)).toBe('2026-09-30T15:07');  // Honolulu −10:00
   });
 });

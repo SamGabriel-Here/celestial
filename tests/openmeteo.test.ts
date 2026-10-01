@@ -23,6 +23,9 @@ describe('parseForecast', () => {
     expect(f.offsetSec).toBe(32400);
     expect(f.hours[0]!.ms).toBe(Date.parse(tokyo.hourly.time[0] + 'Z') - 32400e3);
   });
+  it('records the API’s own observation time for "as of" stamps', () => {
+    expect(parseForecast(tokyo, place).asOf).toBe(tokyo.current.time);
+  });
   it('handles half-hour-ish and negative offsets', () => {
     expect(parseForecast(kathmandu, place).offsetSec).toBe(20700);
     expect(parseForecast(honolulu, place).offsetSec).toBe(-36000);

@@ -13,7 +13,7 @@ type N = number | null;
 type Series = Record<string, N[] | string[]>;
 interface RawForecast {
   utc_offset_seconds: number;
-  current: Record<string, number | null>;
+  current: Record<string, number | null> & { time?: string };
   hourly: Series & { time: string[] };
   minutely_15: Series & { time: string[] };
   daily: Series & { time: string[] };
@@ -60,7 +60,7 @@ export function parseForecast(json: unknown, place: Place): Forecast {
   }));
   const n = (k: string) => c[k] ?? 0;
   return {
-    place, offsetSec: off, fetchedAt: Date.now(), hours, quarters, days,
+    place, offsetSec: off, fetchedAt: Date.now(), asOf: c.time ?? H.time[0] ?? '', hours, quarters, days,
     current: { temp: n('temperature_2m'), feels: n('apparent_temperature'), rh: n('relative_humidity_2m'),
       code: n('weather_code'), cloud: n('cloud_cover'), wind: n('wind_speed_10m'), gust: n('wind_gusts_10m'),
       dir: n('wind_direction_10m'), mm: n('precipitation'), pressure: n('pressure_msl') },

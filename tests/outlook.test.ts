@@ -17,7 +17,7 @@ function forecast(opts: { wetHours?: Record<number, Partial<Hour>>; wetQuarter?:
   }));
   const quarters = Array.from({ length: 8 }, (_, i) => ({ ms: NOW + i * 900e3, iso: isoAt(i / 4), mm: i === opts.wetQuarter ? 0.4 : 0 }));
   return {
-    place: { id: 'x', name: 'Tokyo', country: 'JP', lat: 35.68, lon: 139.69 }, offsetSec: OFF, fetchedAt: NOW, hours, quarters, days: [],
+    place: { id: 'x', name: 'Tokyo', country: 'JP', lat: 35.68, lon: 139.69 }, offsetSec: OFF, fetchedAt: NOW, asOf: isoAt(0), hours, quarters, days: [],
     current: { temp: 20, feels: 20, rh: 60, code: 2, cloud: 40, wind: 5, gust: 8, dir: 0, mm: opts.mmNow ?? 0, pressure: 1013 },
   };
 }
