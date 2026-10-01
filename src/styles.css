@@ -58,7 +58,8 @@ button { cursor: pointer; }
 .notice { font-size: 14px; }
 
 /* ---------- three columns: reading | dial | details ---------- */
-.stage { display: grid; grid-template-columns: minmax(260px, 1fr) auto minmax(260px, 1fr); gap: clamp(20px, 3vw, 56px);
+.stage { overflow-x: clip; /* the glow and printed chart may spread past the dial, never past the page */
+  display: grid; grid-template-columns: minmax(260px, 1fr) auto minmax(260px, 1fr); gap: clamp(20px, 3vw, 56px);
   align-items: start; padding: 8px clamp(16px, 3vw, 40px) 40px; min-height: calc(100dvh - 84px); }
 /* The dial and the reading hold still while a long list scrolls beside them. */
 .dial-col, .reading { position: sticky; top: 16px; }
