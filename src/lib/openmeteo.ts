@@ -50,20 +50,22 @@ export function parseForecast(json: unknown, place: Place): Forecast {
   const toMs = (iso: string) => Date.parse(iso + 'Z') - off * 1000;
   const local = (iso: string) => zonedIso(toMs(iso), tz);
   const H = j.hourly, Q = j.minutely_15, D = j.daily, c = j.current;
+  // Past the horizon the API pads with nulls; a day or hour without a temperature is not a forecast.
+  const has = (s: Series, k: string) => (_: unknown, i: number) => s[k]?.[i] != null;
   const hours: Hour[] = H.time.map((raw, i) => ({
     ms: toMs(raw), iso: local(raw), temp: req(H, 'temperature_2m', i), pop: opt(H, 'precipitation_probability', i),
     mm: req(H, 'precipitation', i), code: req(H, 'weather_code', i), low: req(H, 'cloud_cover_low', i),
     mid: req(H, 'cloud_cover_mid', i), high: req(H, 'cloud_cover_high', i), wind: req(H, 'wind_speed_10m', i),
     gust: req(H, 'wind_gusts_10m', i), dir: req(H, 'wind_direction_10m', i), uv: opt(H, 'uv_index', i),
     freeze: opt(H, 'freezing_level_height', i),
-  }));
+  })).filter(has(H, 'temperature_2m'));
   const quarters: Quarter[] = Q.time.map((raw, i) => ({ ms: toMs(raw), iso: local(raw), mm: req(Q, 'precipitation', i) }));
   const days: Day[] = D.time.map((iso, i) => ({
     iso, code: req(D, 'weather_code', i), max: req(D, 'temperature_2m_max', i), min: req(D, 'temperature_2m_min', i),
     mm: req(D, 'precipitation_sum', i), pop: opt(D, 'precipitation_probability_max', i), uv: opt(D, 'uv_index_max', i),
     rise: D.sunrise?.[i] ? local(D.sunrise[i] as string) : null, set: D.sunset?.[i] ? local(D.sunset[i] as string) : null,
     daylight: req(D, 'daylight_duration', i),
-  }));
+  })).filter(has(D, 'temperature_2m_max'));
   const n = (k: string) => c[k] ?? 0;
   return {
     place, offsetSec: off, timezone: tz, fetchedAt: Date.now(),

@@ -19,6 +19,14 @@ describe('parseForecast', () => {
     expect(f.days).toHaveLength(16);
     expect(f.quarters).toHaveLength(8);
   });
+  it('drops a day or hour past the forecast horizon instead of reading its missing values as 0', () => {
+    const raw = structuredClone(tokyo) as typeof tokyo & { daily: Record<string, unknown[]>; hourly: Record<string, unknown[]> };
+    raw.daily.temperature_2m_max[15] = null as never;
+    raw.hourly.temperature_2m[383] = null as never;
+    const f = parseForecast(raw, place);
+    expect(f.days).toHaveLength(15);
+    expect(f.hours).toHaveLength(383);
+  });
   it('turns local time into true UTC instants with the place’s offset', () => {
     const f = parseForecast(tokyo, place);
     expect(f.offsetSec).toBe(32400);
