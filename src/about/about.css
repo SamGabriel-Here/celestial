@@ -1,0 +1,117 @@
+/* Celestial's landing page: the app's own instrument, held on the page while the scroll turns it. */
+:root {
+  --hdr: 64px;
+  --pad: clamp(16px, 3vw, 40px);
+  --ease: cubic-bezier(.23, 1, .32, 1);
+}
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+body.about { overflow-x: clip; }
+
+/* Pinned acts: a tall section whose stage holds the screen while the scroll passes through it. */
+.day-act { height: 420svh; }
+.days-act { height: 300svh; }
+.close-act { height: 130svh; }
+.day-stage, .days-stage, .close-stage { position: sticky; top: 0; height: 100svh; overflow: clip; }
+.about { --dial: min(calc(100svh - var(--hdr) - 72px), 44vw); }
+.about a { color: inherit; text-underline-offset: 3px; }
+
+/* ---------- chrome: the app's header, fixed, its tabs jumping to the acts ---------- */
+.about-top { position: fixed; z-index: 60; inset: 0 0 auto; height: var(--hdr); padding-block: 0;
+  background: var(--card); border-bottom: 1px solid var(--line-soft); }
+.open-link { justify-self: end; padding: 7px 16px; border: 1px solid var(--print); border-radius: 999px;
+  font: 500 14px/1.2 var(--sans); text-decoration: none; transition: background-color 160ms ease-out, color 160ms ease-out; }
+.open-link:hover { background: var(--print); color: var(--card-deep); }
+.open-link:active { transform: translateY(1px); }
+.about-wait { min-height: 100svh; display: grid; place-items: center; padding: var(--hdr) var(--pad) 0; }
+
+/* ---------- 1 · the day turns ---------- */
+.day-stage { display: grid; grid-template-columns: minmax(240px, 1fr) auto minmax(240px, 1fr); align-items: center;
+  gap: clamp(24px, 3vw, 56px); padding: calc(var(--hdr) + 12px) var(--pad) 20px; }
+.day-stage .reading, .day-stage .details { position: static; padding-top: 0; }
+.day-stage .dial-col { position: static; width: var(--dial); min-height: 0; }
+.day-stage .reading > * { animation: none; }
+.day-stage .temp { margin-top: 14px; }
+.guess { margin-top: 20px; max-width: 30ch; }
+.hint { font-size: 16px; line-height: 1.5; max-width: 34ch; min-height: 9em; margin-bottom: 14px; }
+
+/* ---------- 2 · sixteen days ---------- */
+.days-stage { display: flex; align-items: center; padding-top: var(--hdr); }
+.days-rail { display: flex; will-change: transform; gap: clamp(20px, 2.4vw, 40px); align-items: start; padding-inline: var(--pad); width: max-content; }
+.days-lead, .days-end { align-self: center; width: min(21rem, 78vw); }
+.days-lead p, .days-end { font-size: 18px; line-height: 1.45; }
+.days-end { width: min(15rem, 70vw); color: var(--print-2); padding-right: var(--pad); }
+.about h2:not(.moment) { font: 500 12px/1 var(--sans); letter-spacing: .28em; text-transform: uppercase; color: var(--print-2); margin-bottom: 14px; }
+.day { width: clamp(9.5rem, 12.5vw, 12rem); display: grid; gap: 3px; font-size: 15px; }
+.day-sky { aspect-ratio: 1; border-radius: 50%; overflow: hidden; margin-bottom: 12px; background: var(--card-deep);
+  box-shadow: 0 0 0 1.5px var(--print), 0 10px 24px -8px rgb(5 12 46 / .6); }
+.day-sky canvas { display: block; width: 100%; height: 100%; }
+.day h3 { font: 500 15px/1.3 var(--sans); }
+.day .num { font-size: 20px; }
+
+/* ---------- 3 · where it comes from ---------- */
+.how-act { padding-block: clamp(3rem, 6vw, 6rem) clamp(4rem, 9vw, 9rem); }
+.how-wrap { max-width: 72rem; margin-inline: auto; padding-inline: var(--pad); display: grid; align-items: center; justify-content: center;
+  grid-template-columns: minmax(180px, 20rem) minmax(0, 34rem); gap: clamp(32px, 7vw, 112px); }
+.moon canvas { width: 100%; aspect-ratio: 1; filter: drop-shadow(0 14px 28px rgb(5 12 46 / .55)); }
+.moon figcaption { margin-top: 18px; color: var(--print-2); font-size: 15px; max-width: 30ch; }
+.how-text { display: grid; gap: 16px; font-size: 18px; line-height: 1.55; }
+.how-text p { max-width: 58ch; text-wrap: pretty; }
+
+/* Arrives once, on entry: the moon opens as an iris, the paragraphs rise in reading order. */
+.moon { clip-path: circle(0% at 50% 42%); transition: clip-path 1100ms var(--ease); }
+.how-text > * { opacity: 0; transform: translateY(14px); transition: opacity 620ms var(--ease), transform 620ms var(--ease); }
+.how-act.in .moon { clip-path: circle(75% at 50% 50%); }
+.how-act.in .how-text > * { opacity: 1; transform: none; }
+.how-text > :nth-child(2) { transition-delay: 70ms; }
+.how-text > :nth-child(3) { transition-delay: 140ms; }
+.how-text > :nth-child(4) { transition-delay: 210ms; }
+
+/* ---------- 4 · your sky ---------- */
+.close-stage { display: grid; grid-template-columns: minmax(0, 1fr); align-content: center; padding: var(--hdr) clamp(16px, 7vw, 120px) 56px; }
+.close-ring { position: absolute; width: min(120svh, 96vw); right: -22vw; top: 50%; translate: 0 -50%; fill: none;
+  stroke: var(--line-soft); stroke-width: 1.5; pointer-events: none; }
+.close-ring line { stroke: var(--line); }
+.close-inner { position: relative; display: grid; gap: 26px; width: 100%; max-width: 34rem; min-width: 0; }
+.close-inner h2.close-q, .about .close-inner h2 { font: 300 clamp(44px, 6vw, 84px)/1 var(--sans); letter-spacing: -.02em; text-transform: none; color: var(--print); margin: 0; }
+.close-form { display: flex; gap: 12px; border-bottom: 1px solid var(--print-2); }
+.close-form:focus-within { border-bottom-color: var(--sun); }
+.close-form input { flex: 1; min-width: 0; background: none; border: 0; padding: 10px 2px; font-size: 22px; color: var(--print); }
+.close-form input::placeholder { color: var(--print-2); }
+.close-form input:focus-visible { outline: none; }
+.close-form button { background: none; border: 0; padding: 0 2px; white-space: nowrap; color: var(--print);
+  font: 500 14px var(--sans); letter-spacing: .2em; text-transform: uppercase; }
+.close-form button:hover { color: var(--sun); }
+.close-form button:active { transform: translateY(1px); }
+.foot { position: absolute; left: clamp(16px, 7vw, 120px); bottom: 20px; }
+
+/* ---------- phone: the place and the reading above the wheel, the status line below ---------- */
+@media (max-width: 980px) {
+  :root { --hdr: 56px; }
+  .about { --dial: min(calc(100vw - 32px), calc(100svh - var(--hdr) - 300px)); }
+  .about-top { grid-template-columns: 1fr auto; padding-inline: 16px; }
+  .about-top .tabs { display: none; }
+  .day-stage { grid-template-columns: 1fr; align-content: center; align-items: start; justify-items: center; gap: 12px;
+    padding: calc(var(--hdr) + 10px) 16px 12px; }
+  .day-stage .reading { width: 100%; display: grid; grid-template-columns: 1fr auto; column-gap: 12px; row-gap: 2px; }
+  .day-stage .reading h1 { grid-column: 1; font-size: 22px; }
+  .day-stage .reading .when { grid-column: 1; }
+  .day-stage .temp { grid-column: 2; grid-row: 1 / span 3; align-self: center; font-size: 64px; margin: 0; }
+  .day-stage .cond, .day-stage .feels { grid-column: 1; font-size: 15px; }
+  .day-stage .guess { display: none; }
+  .day-stage .details { width: 100%; }
+  .day-stage .details h2, .day-stage .details .at { display: none; }
+  .hint { min-height: 0; max-width: none; font-size: 15px; margin: 0; }
+  .how-wrap { grid-template-columns: 1fr; justify-items: start; }
+  .moon { width: min(60vw, 16rem); }
+  .close-ring { width: 150vw; right: -75vw; }
+  .close-form input { font-size: 19px; }
+  .close-form button { letter-spacing: .12em; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .open-link, .close-form button { transition: none; }
+  /* The rail is navigation, not decoration: without motion it becomes a native sideways scroll. */
+  .days-act { height: auto; }
+  .days-stage { position: static; height: auto; overflow-x: auto; padding-block: calc(var(--hdr) + 6vh) 6vh; }
+  .moon { clip-path: none; transition: none; }
+  .how-text > * { transform: none; transition: opacity 220ms ease-out; }
+}

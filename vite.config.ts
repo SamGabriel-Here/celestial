@@ -11,16 +11,20 @@ const inlineCss = (): Plugin => ({
   apply: 'build',
   enforce: 'post',
   generateBundle(_, bundle) {
-    const html = bundle['index.html'];
-    if (!html || html.type !== 'asset') return;
-    let source = String(html.source);
-    for (const [name, chunk] of Object.entries(bundle)) {
-      if (chunk.type !== 'asset' || !name.endsWith('.css') || !source.includes(name)) continue;
-      const tag = new RegExp(`<link rel="stylesheet"[^>]*href="/${name.replace(/[.]/g, '\\.')}"[^>]*>`);
-      source = source.replace(tag, `<style>${String(chunk.source)}</style>`);
-      delete bundle[name];
+    // Every page inlines its own stylesheets; a sheet shared by two pages is dropped only after both have it.
+    const inlined = new Set<string>();
+    for (const html of Object.values(bundle)) {
+      if (html.type !== 'asset' || !html.fileName.endsWith('.html')) continue;
+      let source = String(html.source);
+      for (const [name, chunk] of Object.entries(bundle)) {
+        if (chunk.type !== 'asset' || !name.endsWith('.css') || !source.includes(name)) continue;
+        const tag = new RegExp(`<link rel="stylesheet"[^>]*href="/${name.replace(/[.]/g, '\\.')}"[^>]*>`);
+        source = source.replace(tag, `<style>${String(chunk.source)}</style>`);
+        inlined.add(name);
+      }
+      html.source = source;
     }
-    html.source = source;
+    for (const name of inlined) delete bundle[name];
   },
 });
 
@@ -49,6 +53,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        navigateFallbackDenylist: [/^\/about/], // the landing page is its own document, not the app shell
         globPatterns: ['**/*.{js,css,html,woff2,svg,png}'],
         runtimeCaching: [
           {
@@ -72,6 +77,6 @@ export default defineConfig({
       },
     }),
   ],
-  build: { target: 'es2022', sourcemap: false },
+  build: { target: 'es2022', sourcemap: false, rollupOptions: { input: { main: 'index.html', about: 'about.html' } } },
   test: { include: ['tests/**/*.test.ts'] },
 });

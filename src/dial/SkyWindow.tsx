@@ -138,7 +138,7 @@ export function drawSky(canvas: HTMLCanvasElement, o: SkyOpts): void {
   }
 }
 
-function drawMoon(g: CanvasRenderingContext2D, x: number, y: number, r: number, phase: number, south: boolean, day: boolean) {
+export function drawMoon(g: CanvasRenderingContext2D, x: number, y: number, r: number, phase: number, south: boolean, day: boolean) {
   g.save(); g.translate(x, y); if (south) g.scale(-1, 1);
   g.fillStyle = day ? 'rgba(255,255,255,.25)' : 'rgba(10,16,40,.85)';
   g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.fill();

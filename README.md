@@ -11,7 +11,7 @@
 [![React](https://img.shields.io/badge/React-19-61dafb)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6)](https://www.typescriptlang.org)
 
-[**Open the app →**](https://celestialsky.vercel.app)
+[**Open the app →**](https://celestialsky.vercel.app) · [Take the tour: scroll through a day over your city →](https://celestialsky.vercel.app/about)
 
 ![Tokyo at night: the real stars, a waning moon rising in the east, and the next 24 hours printed around the rim](docs/now.png)
 
