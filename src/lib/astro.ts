@@ -17,16 +17,22 @@ function sunCoords(d: number) {
   const m = RAD * (357.5291 + 0.98560028 * d);
   const c = RAD * (1.9148 * Math.sin(m) + 0.02 * Math.sin(2 * m) + 0.0003 * Math.sin(3 * m));
   const l = m + c + RAD * 102.9372 + Math.PI;
-  return { ra: rightAscension(l, 0), dec: declination(l, 0) };
+  return { ra: rightAscension(l, 0), dec: declination(l, 0), lon: l };
 }
 
 function moonCoords(d: number) {
   const l0 = RAD * (218.316 + 13.176396 * d);
   const m = RAD * (134.963 + 13.064993 * d);
   const f = RAD * (93.272 + 13.22935 * d);
-  const l = l0 + RAD * 6.289 * Math.sin(m);
-  const b = RAD * 5.128 * Math.sin(f);
-  return { ra: rightAscension(l, b), dec: declination(l, b), dist: 385001 - 20905 * Math.cos(m) };
+  const e = RAD * (297.8502 + 12.19074912 * d); // mean elongation
+  const ms = RAD * (357.5291 + 0.98560028 * d); // sun's mean anomaly
+  // Largest periodic terms (Meeus, low precision): equation of centre, evection, variation,
+  // annual equation. Without them the moon wanders by over a degree, ±5 h in phase timing.
+  const l = l0 + RAD * (6.289 * Math.sin(m) + 1.274 * Math.sin(2 * e - m) + 0.658 * Math.sin(2 * e)
+    + 0.214 * Math.sin(2 * m) - 0.186 * Math.sin(ms) - 0.114 * Math.sin(2 * f));
+  const b = RAD * (5.128 * Math.sin(f) + 0.2806 * Math.sin(m + f) + 0.2777 * Math.sin(m - f) + 0.1732 * Math.sin(2 * e - f));
+  const dist = 385001 - 20905 * Math.cos(m) - 3699 * Math.cos(2 * e - m) - 2956 * Math.cos(2 * e);
+  return { ra: rightAscension(l, b), dec: declination(l, b), dist, lon: l };
 }
 
 function horizontal(ra: number, dec: number, ms: number, lat: number, lon: number): Position {
@@ -47,7 +53,7 @@ export function moonPosition(ms: number, lat: number, lon: number): Position {
   return horizontal(c.ra, c.dec, ms, lat, lon);
 }
 
-/** lit: illuminated fraction 0..1. phase: 0 new → 0.5 full → 1 new. */
+/** lit: illuminated fraction 0..1. phase: ecliptic elongation as a fraction, 0 new → 0.5 full → 1 new. */
 export function moonPhase(ms: number): { lit: number; phase: number } {
   const d = toDays(ms);
   const s = sunCoords(d);
@@ -57,11 +63,11 @@ export function moonPhase(ms: number): { lit: number; phase: number } {
     Math.sin(s.dec) * Math.sin(m.dec) + Math.cos(s.dec) * Math.cos(m.dec) * Math.cos(s.ra - m.ra),
   );
   const inc = Math.atan2(sunDist * Math.sin(phi), m.dist - sunDist * Math.cos(phi));
-  const angle = Math.atan2(
-    Math.cos(s.dec) * Math.sin(s.ra - m.ra),
-    Math.sin(s.dec) * Math.cos(m.dec) - Math.cos(s.dec) * Math.sin(m.dec) * Math.cos(s.ra - m.ra),
-  );
-  return { lit: (1 + Math.cos(inc)) / 2, phase: 0.5 + (0.5 * inc * (angle < 0 ? -1 : 1)) / Math.PI };
+  // New and full moon are defined in ecliptic longitude, not right ascension: the moon's 5° tilt
+  // makes the two disagree by hours.
+  const TAU = 2 * Math.PI;
+  const phase = (((m.lon - s.lon) % TAU) + TAU) % TAU / TAU;
+  return { lit: (1 + Math.cos(inc)) / 2, phase };
 }
 
 const PHASES = ['New moon', 'Waxing crescent', 'First quarter', 'Waxing gibbous',
@@ -109,3 +115,25 @@ export const STARS: readonly Star[] = [
 
 export const starPosition = (star: Star, ms: number, lat: number, lon: number): Position =>
   horizontal(star[1] * 15 * RAD, star[2] * RAD, ms, lat, lon);
+
+/** The next full (0.5) or new (0) moon after `ms`: hourly search, then refined to the minute. */
+export function nextPhase(ms: number, target: 0 | 0.5): number {
+  const crossed = (a: number, b: number) => (target === 0.5 ? a < 0.5 && b >= 0.5 : b < a - 0.5);
+  let t = ms;
+  let prev = moonPhase(t).phase;
+  for (let step = 0; step < 24 * 31; step++) {
+    const next = t + 3600e3;
+    const cur = moonPhase(next).phase;
+    if (crossed(prev, cur)) {
+      let lo = t, hi = next;
+      while (hi - lo > 60e3) {
+        const mid = (lo + hi) / 2;
+        if (crossed(moonPhase(lo).phase, moonPhase(mid).phase)) hi = mid; else lo = mid;
+      }
+      return hi;
+    }
+    t = next;
+    prev = cur;
+  }
+  return t;
+}

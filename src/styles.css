@@ -131,3 +131,10 @@ button { cursor: pointer; }
 .leaflet-container { font: 400 12px var(--sans); }
 .leaflet-bar a { color: var(--ink); }
 .leaflet-tile-container img.leaflet-tile { width: 256.6px !important; height: 256.6px !important; } /* hide sub-pixel tile seams */
+
+/* ---------- air & sky ---------- */
+.dome { position: absolute; inset: 0; display: grid; grid-template-rows: minmax(0, 1fr) auto; }
+.dome-stage { display: grid; place-items: center; min-height: 0; }
+.dome-controls { padding: 12px 16px 16px; border-top: 1px solid var(--rule); display: grid; gap: 8px; }
+.dome-controls input { accent-color: var(--ink); }
+.dome-controls p { font-size: 13px; color: var(--ink-2); max-width: 80ch; }

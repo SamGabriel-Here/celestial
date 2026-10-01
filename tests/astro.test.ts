@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { STARS, moonPhase, phaseName, starPosition, sunEvents, sunPosition } from '../src/lib/astro';
+import { STARS, moonPhase, nextPhase, phaseName, starPosition, sunEvents, sunPosition } from '../src/lib/astro';
 
 describe('astro', () => {
   it('puts the solstice noon sun at ~62° due south over Greenwich', () => {
@@ -28,5 +28,9 @@ describe('astro', () => {
     expect(g.polar).toBeNull();
     expect(g.rise).not.toBeNull();
     expect(g.set).not.toBeNull();
+  });
+  it('finds the next full and new moon', () => {
+    expect(Math.abs(nextPhase(Date.UTC(2025, 0, 1), 0.5) - Date.UTC(2025, 0, 13, 22, 27))).toBeLessThan(2 * 3600e3);
+    expect(Math.abs(nextPhase(Date.UTC(2025, 0, 14), 0) - Date.UTC(2025, 0, 29, 12, 36))).toBeLessThan(2 * 3600e3);
   });
 });
