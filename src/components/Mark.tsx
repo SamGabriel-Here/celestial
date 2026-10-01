@@ -1,11 +1,11 @@
-// The mark is a section in miniature: a framed slice of sky, the freezing-level line, the sun.
-export function Mark({ size = 28, title }: { size?: number; title?: string }) {
+// The mark is a star wheel in miniature: the rim, the window, the sun, the pointer.
+export function Mark({ size = 30, title }: { size?: number; title?: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 28 28" role={title ? 'img' : undefined} aria-hidden={title ? undefined : true} aria-label={title}>
-      <rect x="1" y="1" width="26" height="26" fill="none" stroke="#11141b" strokeWidth="1.6" />
-      <path d="M1 18.5 C6 14.5 9.5 17.5 14 16 S22 12.5 27 14.5" fill="none" stroke="#0091c2" strokeWidth="1.8" />
-      <circle cx="19.5" cy="7.5" r="3" fill="#11141b" />
-      <path d="M5 23.5h18" stroke="#11141b" strokeWidth="1" />
+    <svg width={size} height={size} viewBox="0 0 30 30" role={title ? 'img' : undefined} aria-hidden={title ? undefined : true} aria-label={title}>
+      <circle cx="15" cy="15.5" r="13" fill="none" stroke="#f3f5fb" strokeWidth="1.3" />
+      <circle cx="15" cy="15.5" r="8.5" fill="none" stroke="#f3f5fb" strokeWidth=".9" strokeDasharray="1 2" />
+      <circle cx="19.6" cy="11" r="2.5" fill="#ffc92e" />
+      <path d="M15 0.5v4.5" stroke="#ffc92e" strokeWidth="1.6" />
     </svg>
   );
 }

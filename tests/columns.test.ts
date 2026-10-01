@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { altitudeY, cloudBase, dayColumns, hourColumns } from '../src/lib/columns';
+import { dayColumns, hourColumns } from '../src/lib/columns';
 import { parseForecast } from '../src/lib/openmeteo';
 import { clockLabel } from '../src/lib/units';
 import tokyo from './fixtures/tokyo.json';
@@ -31,19 +31,6 @@ describe('hourColumns', () => {
   });
 });
 
-describe('geometry', () => {
-  it('puts the cloud base under the lowest cloud deck', () => {
-    const base = { low: 0, mid: 0 } as Parameters<typeof cloudBase>[0];
-    expect(cloudBase({ ...base, low: 60 })).toBe(1400);
-    expect(cloudBase({ ...base, mid: 60 })).toBe(3000);
-    expect(cloudBase(base)).toBe(2000);
-  });
-  it('maps 12 km to the top and the ground to the bottom', () => {
-    expect(altitudeY(12000, 0, 100)).toBe(0);
-    expect(altitudeY(0, 0, 100)).toBe(100);
-    expect(altitudeY(6000, 20, 100)).toBe(70);
-  });
-});
 
 describe('dayColumns', () => {
   const days = dayColumns(f);

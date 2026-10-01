@@ -1,52 +1,54 @@
 import { lazy, Suspense } from 'react';
+import { Mark } from '../components/Mark';
+import { Places } from '../components/Places';
 import { RainTimeline } from '../components/RainTimeline';
-import { Rail } from '../components/Rail';
+import { Reading } from '../components/Reading';
+import { Search } from '../components/Search';
 import { Tabs } from '../components/Tabs';
 import { AirRail } from '../views/AirRail';
-import { DaysPanel, DaysRail } from '../views/Days';
-import { NowPanel, NowRail } from '../views/Now';
+import { DaysDetails, DaysDial } from '../views/Days';
+import { NowDetails, NowDial } from '../views/Now';
 import { DataProvider, useData } from './data';
 
-// Leaflet and the radar only load when the Radar view opens.
-const RadarPanel = lazy(() => import('../views/Radar').then((m) => ({ default: m.RadarPanel })));
-const AirPanel = lazy(() => import('../views/Air').then((m) => ({ default: m.AirPanel })));
+// Leaflet and the radar, and the moon-month dial, load only when their view opens.
+const RadarDial = lazy(() => import('../views/Radar').then((m) => ({ default: m.RadarDial })));
+const AirDial = lazy(() => import('../views/Air').then((m) => ({ default: m.AirDial })));
 
 export function App() {
   return (
     <DataProvider>
-      <Shell />
+      <Card />
     </DataProvider>
   );
 }
 
-function RadarRail() {
-  const { forecast } = useData();
-  if (!forecast) return null;
-  return (
-    <>
-      <RainTimeline quarters={forecast.quarters} />
-      <p className="rail-more quiet small">Radar shows the last two hours in ten-minute frames. Deeper blue is heavier rain.</p>
-    </>
-  );
-}
-
-function Shell() {
+function Card() {
   const { url, forecast } = useData();
   const v = url.view;
+  const showRain = forecast && (v === 'now' || v === 'radar');
   return (
-    <div className="app">
-      <Rail>{v === 'now' ? <NowRail /> : v === 'days' ? <DaysRail /> : v === 'radar' ? <RadarRail /> : <AirRail />}</Rail>
-      <main className="panel" aria-label="Sky">
+    <>
+      <header className="top">
+        <a className="brand" href="/"><Mark /><span>Celestial</span></a>
         <Tabs />
-        <div className="panel-body">
-          {forecast && (v === 'now' ? <NowPanel /> : v === 'days' ? <DaysPanel /> : null)}
-          {(v === 'radar' || v === 'air') && (
-            <Suspense fallback={<p className="panel-wait quiet">Loading…</p>}>
-              {v === 'radar' ? <RadarPanel /> : forecast && <AirPanel />}
+        <Search />
+      </header>
+      <main className="stage">
+        <Reading>{showRain && <RainTimeline quarters={forecast.quarters} />}</Reading>
+        <div className="dial-col">
+          {forecast && (
+            <Suspense fallback={<p className="dial-hint">Loading…</p>}>
+              {v === 'now' ? <NowDial /> : v === 'days' ? <DaysDial /> : v === 'radar' ? <RadarDial /> : <AirDial />}
             </Suspense>
           )}
         </div>
+        <aside className="details">
+          {forecast && (v === 'now' ? <NowDetails /> : v === 'days' ? <DaysDetails /> : v === 'air' ? <AirRail /> : (
+            <p className="quiet small">Radar shows the last two hours in ten-minute frames. Brighter blue is heavier rain. The yellow ring is the place.</p>
+          ))}
+          <Places />
+        </aside>
       </main>
-    </div>
+    </>
   );
 }

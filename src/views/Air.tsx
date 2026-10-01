@@ -1,51 +1,44 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useMemo } from 'react';
 import { useData } from '../app/data';
-import { moonPhase, moonPosition, phaseName, sunPosition } from '../lib/astro';
-import { clockLabel, compass, localIso, weekday } from '../lib/units';
-import { drawDome } from '../section/dome';
+import { Dial, type Segment } from '../dial/Dial';
+import { SkyWindow } from '../dial/SkyWindow';
+import { moonPhase, phaseName } from '../lib/astro';
+import { localIso } from '../lib/units';
 
-export function AirPanel() {
+const DAY = 864e5;
+const CYCLE = 30; // days on the rim: one lunar month
+
+/** The sky now, and a rim of the coming lunar month: spoke length is how much of the moon is lit. */
+export function AirDial() {
   const { place, forecast, url, setUrl } = useData();
-  const wrap = useRef<HTMLDivElement>(null);
-  const canvas = useRef<HTMLCanvasElement>(null);
-  const [size, setSize] = useState(0);
-  const hourMs = 3600e3;
-  const ms = Math.floor(Date.now() / hourMs) * hourMs + url.t * hourMs;
-  const hour = forecast?.hours.find((h) => h.ms <= ms && h.ms + hourMs > ms);
-  const cloud = hour ? Math.max(hour.low, hour.mid, hour.high) : forecast?.current.cloud ?? 0;
-
-  useLayoutEffect(() => {
-    const el = wrap.current!;
-    const ro = new ResizeObserver(() => setSize(Math.max(200, Math.min(el.clientWidth, el.clientHeight) - 24)));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!place || !size || !canvas.current) return;
-    let live = true;
-    document.fonts.ready.then(() => live && drawDome(canvas.current!, { ms, lat: place.lat, lon: place.lon, cloudPct: cloud }));
-    return () => { live = false; };
-  }, [place, size, ms, cloud]);
-
+  const now = useMemo(() => Date.now(), [forecast]);
   if (!place || !forecast) return null;
-  const sun = sunPosition(ms, place.lat, place.lon);
-  const moon = moonPosition(ms, place.lat, place.lon);
-  const ph = moonPhase(ms);
-  const when = localIso(ms, forecast.offsetSec);
-  const caption = `${weekday(when)} ${clockLabel(when)}: sun ${sun.alt > 0 ? `${Math.round(sun.alt)}° up in the ${compass(sun.az)}` : 'below the horizon'}; ` +
-    `moon ${moon.alt > 0 ? `${Math.round(moon.alt)}° up in the ${compass(moon.az)}` : 'down'}, ${phaseName(ph.phase).toLowerCase()}, ${Math.round(ph.lit * 100)}% lit; ${cloud}% cloud.`;
-
+  const off = forecast.offsetSec;
+  const i = Math.min(url.t, CYCLE - 1);
+  // Day 0 is now; later days show that night at 22:00 local.
+  const nightOf = (k: number) => {
+    const local = localIso(now + k * DAY, off).slice(0, 10);
+    return Date.parse(`${local}T22:00Z`) - off * 1000;
+  };
+  const days = Array.from({ length: CYCLE }, (_, k) => {
+    const ms = k ? nightOf(k) : now;
+    return { ms, ...moonPhase(ms), iso: localIso(ms, off) };
+  });
+  const segments: Segment[] = days.map((d, k) => {
+    const prev = k ? days[k - 1]!.phase : d.phase;
+    const turn = k > 0 && ((prev < 0.5 && d.phase >= 0.5) || d.phase < prev - 0.5); // full or new moon falls in this day
+    return { key: d.iso.slice(0, 10), top: String(Number(d.iso.slice(8, 10))), bottom: '', spoke: Math.max(0.02, d.lit), spokeAlpha: 1, tone: 'moon', mark: k === 0 || turn };
+  });
+  const d = days[i]!;
+  const hour = forecast.hours.find((h) => h.ms <= d.ms && h.ms + 3600e3 > d.ms);
   return (
-    <div className="dome">
-      <div ref={wrap} className="dome-stage">
-        <canvas ref={canvas} style={{ width: size, height: size }} role="img" aria-label={`The sky overhead. ${caption}`} />
-      </div>
-      <div className="dome-controls">
-        <input type="range" min={0} max={35} value={url.t} aria-label="Hour" aria-valuetext={`${weekday(when)} ${clockLabel(when)}`}
-          onChange={(e) => setUrl({ t: Number(e.target.value) })} />
-        <p className="mono">{caption}</p>
-      </div>
-    </div>
+    <>
+      <Dial segments={segments} index={i} onIndex={(t) => setUrl({ t })} label="Turn the wheel through the coming lunar month"
+        valueText={`${d.iso.slice(5, 10)}: ${phaseName(d.phase)}, ${Math.round(d.lit * 100)}% lit`}>
+        <SkyWindow ms={d.ms} lat={place.lat} lon={place.lon} low={hour?.low ?? 0} mid={hour?.mid ?? 0} high={hour?.high ?? 0} mm={hour?.mm ?? 0}
+          label={`The sky over ${place.name}${i ? ' that night' : ' now'}: ${phaseName(d.phase).toLowerCase()}, ${Math.round(d.lit * 100)}% lit`} />
+      </Dial>
+      <p className="dial-hint">{i ? `${phaseName(d.phase)}, ${Math.round(d.lit * 100)}% lit, that night at 22:00` : 'The sky now. Turn the wheel through the coming lunar month'}</p>
+    </>
   );
 }

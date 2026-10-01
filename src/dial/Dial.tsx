@@ -8,6 +8,7 @@ export interface Segment {
   spoke?: number; // 0..1 length of the rain spoke
   spokeAlpha?: number; // 0..1 strength (chance)
   mark?: boolean; // a yellow dot: today, latest, now
+  tone?: 'rain' | 'moon'; // spoke colour: rain amount, or the moon's illumination
 }
 
 interface Props {
@@ -17,13 +18,13 @@ interface Props {
   label: string;
   valueText: string;
   children: ReactNode; // the window
+  turnMs?: number; // how fast the rim turns to a new selection
 }
 
 // SVG units: the rim is drawn in a 1000×1000 box centred on 0,0.
 const R_WIN = 330, R_RIM = 470, R_LABEL = 432;
-const TURN = 'transform 900ms cubic-bezier(.16, 1, .3, 1)';
 
-export function Dial({ segments, index, onIndex, label, valueText, children }: Props) {
+export function Dial({ segments, index, onIndex, label, valueText, children, turnMs = 900 }: Props) {
   const svg = useRef<SVGSVGElement>(null);
   const drag = useRef<{ start: number; deg: number } | null>(null);
   const latest = useRef(index);
@@ -39,7 +40,8 @@ export function Dial({ segments, index, onIndex, label, valueText, children }: P
     return () => cancelAnimationFrame(id);
   }, [settled]);
   const rotation = -index * seg + (settled ? 0 : 90);
-  const transition = reduced ? 'none' : TURN;
+  // The load swing is always the slow one; later turns use the view's pace.
+  const transition = reduced ? 'none' : `transform ${settled ? turnMs : 900}ms cubic-bezier(.16, 1, .3, 1)`;
 
   const step = (to: number) => onIndex(Math.max(0, Math.min(n - 1, to)));
 
@@ -85,7 +87,7 @@ export function Dial({ segments, index, onIndex, label, valueText, children }: P
                 <line x1={sx * r0} y1={cy * r0} x2={sx * (r0 + 9)} y2={cy * (r0 + 9)} className="tick" />
                 {s.spoke !== undefined && s.spoke > 0 && (
                   <line x1={sx * (r0 + 15)} y1={cy * (r0 + 15)} x2={sx * (r0 + 15 + len)} y2={cy * (r0 + 15 + len)}
-                    className="spoke" style={{ opacity: 0.3 + (s.spokeAlpha ?? 0.5) * 0.7 }} />
+                    className={`spoke ${s.tone ?? 'rain'}`} style={{ opacity: 0.3 + (s.spokeAlpha ?? 0.5) * 0.7 }} />
                 )}
                 <g transform={`translate(${sx * R_LABEL} ${cy * R_LABEL})`}>
                   <g className="label" style={{ transform: `rotate(${-rotation}deg)`, transition }}>
@@ -98,7 +100,7 @@ export function Dial({ segments, index, onIndex, label, valueText, children }: P
             );
           })}
         </g>
-        <line x1={0} y1={-R_WIN} x2={0} y2={-R_RIM - 10} className="pointer-line" />
+        <line x1={0} y1={-R_WIN} x2={0} y2={-(R_LABEL - 38)} className="pointer-line" />
         <path d={`M0 ${-R_RIM - 12} l-13 -24 h26 z`} className="pointer" />
       </svg>
     </div>

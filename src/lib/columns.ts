@@ -3,7 +3,6 @@ import type { Forecast } from './types';
 import { clockLabel, weekday } from './units';
 
 const HOUR = 3600e3;
-export const TOP_M = 12000; // the section's ceiling, metres
 
 /** One vertical slice of the section: an hour (Now) or a day (Days). */
 export interface Column {
@@ -35,12 +34,6 @@ export function hourColumns(f: Forecast, nowMs: number, span = 36): Column[] {
     code: h.code, wind: h.wind,
   }));
 }
-
-/** Metres where rain leaves the cloud: under the lowest deck that is really there. */
-export const cloudBase = (c: Pick<Column, 'low' | 'mid'>): number => (c.low > 20 ? 1400 : c.mid > 20 ? 3000 : 2000);
-
-/** Canvas y for an altitude: 12 km at `top`, the ground at `top + height`. */
-export const altitudeY = (m: number, top: number, height: number): number => top + (1 - m / TOP_M) * height;
 
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 

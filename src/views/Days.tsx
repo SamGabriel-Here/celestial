@@ -1,8 +1,9 @@
 import { useCallback, useMemo } from 'react';
 import { useData } from '../app/data';
-import { dayColumns, type Column } from '../lib/columns';
+import { Dial, type Segment } from '../dial/Dial';
+import { SkyWindow } from '../dial/SkyWindow';
+import { dayColumns } from '../lib/columns';
 import { capitalise, fmtTemp, weatherWords, weekday } from '../lib/units';
-import { Section } from '../section/Section';
 
 const dateOf = (iso: string) => Number(iso.slice(8, 10));
 
@@ -11,67 +12,63 @@ function useDays() {
   return useMemo(() => (forecast ? dayColumns(forecast) : []), [forecast]);
 }
 
-export function DaysRail() {
-  const { forecast, settings } = useData();
+export function DaysDial() {
+  const { place, settings, url, setUrl } = useData();
+  const cols = useDays();
+  const u = settings.unit;
+  const onIndex = useCallback((t: number) => setUrl({ t }), [setUrl]);
+  if (!place || !cols.length) return null;
+  const i = Math.min(url.t, cols.length - 1);
+  const c = cols[i]!;
+  const maxMm = Math.max(1, ...cols.map((x) => x.mm));
+  const segments: Segment[] = cols.map((x, k) => ({
+    key: x.iso, top: k ? `${x.label} ${dateOf(x.iso)}` : 'Today', bottom: fmtTemp(x.temp, u), mark: k === 0,
+    ...(x.mm >= 0.1 ? { spoke: x.mm / maxMm, spokeAlpha: (x.pop ?? 50) / 100 } : {}),
+  }));
+  return (
+    <>
+      <Dial segments={segments} index={i} onIndex={onIndex} label="Turn the wheel to see another day"
+        valueText={`${weekday(c.iso)} ${dateOf(c.iso)}: high ${fmtTemp(c.temp, u)}, low ${fmtTemp(c.tempMin ?? c.temp, u)}, ${weatherWords(c.code)}`}>
+        <SkyWindow ms={c.startMs} lat={place.lat} lon={place.lon} low={c.low} mid={c.mid} high={c.high} mm={c.mm / 24}
+          label={`The noon sky over ${place.name} on ${weekday(c.iso)} ${dateOf(c.iso)}: ${weatherWords(c.code)}`} />
+      </Dial>
+      <p className="dial-hint">Turn the wheel through sixteen days of noon skies</p>
+    </>
+  );
+}
+
+export function DaysDetails() {
+  const { forecast, settings, url } = useData();
   const cols = useDays();
   if (!forecast || !cols.length) return null;
   const u = settings.unit;
-  const warm = cols.reduce((a, b) => (b.temp > a.temp ? b : a));
-  const wet = cols.reduce((a, b) => (b.mm > a.mm ? b : a));
-  const day = (c: Column) => `${weekday(c.iso)} ${dateOf(c.iso)}`;
+  const i = Math.min(url.t, cols.length - 1);
+  const c = cols[i]!;
   return (
-    <div className="rail-more">
-      <p className="summary">
-        Warmest on {day(warm)} at {fmtTemp(warm.temp, u)}.{' '}
-        {wet.mm >= 1 ? <>Wettest on {day(wet)}, {wet.mm.toFixed(0)} mm.</> : <>No real rain in sixteen days.</>}
-      </p>
-      <section className="week">
+    <>
+      <section>
+        <h2>{i ? 'On the wheel' : 'Today'}</h2>
+        <dl className="at">
+          <dt className="when">{weekday(c.iso)} {dateOf(c.iso)}</dt>
+          <dt>Sky</dt><dd>{capitalise(weatherWords(c.code))}</dd>
+          <dt>High · low</dt><dd>{fmtTemp(c.temp, u)} · {fmtTemp(c.tempMin ?? c.temp, u)}</dd>
+          <dt>Rain</dt><dd>{c.mm >= 0.1 ? `${c.mm.toFixed(1)} mm` : 'dry'}{c.pop != null ? `, ${c.pop}% chance` : ''}</dd>
+          <dt>UV</dt><dd>{c.uv != null ? Math.round(c.uv) : '—'}</dd>
+          <dt>Cloud</dt><dd>low {Math.round(c.low)}% · mid {Math.round(c.mid)}% · high {Math.round(c.high)}%</dd>
+        </dl>
+      </section>
+      <section>
         <h2>Sixteen days</h2>
-        <ol>
-          {forecast.days.map((d, i) => (
-            <li key={d.iso} className="day">
-              <span>{i ? `${weekday(d.iso)} ${dateOf(d.iso)}` : 'Today'}</span>
-              <span>{capitalise(weatherWords(d.code))}<small>{d.mm >= 0.1 ? `${d.mm.toFixed(1)} mm` : 'dry'}{d.pop != null ? ` · ${d.pop}%` : ''}{d.uv != null ? ` · UV ${Math.round(d.uv)}` : ''}</small></span>
-              <span className="mono">{fmtTemp(d.max, u)} <span className="lo">{fmtTemp(d.min, u)}</span></span>
+        <ol className="list">
+          {forecast.days.map((d, k) => (
+            <li key={d.iso} className={k === i ? 'sel' : undefined}>
+              <span>{k ? `${weekday(d.iso)} ${dateOf(d.iso)}` : 'Today'}</span>
+              <span>{capitalise(weatherWords(d.code))}<small>{d.mm >= 0.1 ? `${d.mm.toFixed(1)} mm` : 'dry'}{d.pop != null ? ` · ${d.pop}%` : ''}</small></span>
+              <span className="r">{fmtTemp(d.max, u)} <span>{fmtTemp(d.min, u)}</span></span>
             </li>
           ))}
         </ol>
       </section>
-    </div>
-  );
-}
-
-export function DaysPanel() {
-  const { settings, url, setUrl } = useData();
-  const cols = useDays();
-  const u = settings.unit;
-  const fmt = useCallback((c: number) => fmtTemp(c, u), [u]);
-  const onCursor = useCallback((t: number) => setUrl({ t }), [setUrl]);
-  const cursor = Math.min(url.t, cols.length - 1);
-
-  return (
-    <Section cols={cols} kind="days" cursor={cursor} onCursor={onCursor} fmtTemp={fmt}
-      label="The next sixteen days: use the arrow keys to move through the days"
-      valueText={(c) => `${weekday(c.iso)} ${dateOf(c.iso)}: high ${fmt(c.temp)}, low ${fmt(c.tempMin ?? c.temp)}, ${weatherWords(c.code)}, ${c.mm.toFixed(1)} millimetres of rain`}
-      readout={(c) => (
-        <>
-          <b>{weekday(c.iso)} {dateOf(c.iso)}</b>
-          <span className="mono">{fmt(c.temp)} / {fmt(c.tempMin ?? c.temp)} · {weatherWords(c.code)}</span>
-          <span className="mono">rain {c.mm.toFixed(1)} mm · {c.pop ?? '—'}%</span>
-          <span className="mono">UV {c.uv != null ? Math.round(c.uv) : '—'} · cloud {Math.round((c.low + c.mid + c.high) / 3)}%</span>
-        </>
-      )}
-      table={(
-        <table>
-          <caption>Daily forecast, next sixteen days</caption>
-          <thead><tr><th>Day</th><th>High</th><th>Low</th><th>Weather</th><th>Rain</th><th>Chance of rain</th><th>UV</th></tr></thead>
-          <tbody>
-            {cols.map((c) => (
-              <tr key={c.iso}><td>{weekday(c.iso)} {dateOf(c.iso)}</td><td>{fmt(c.temp)}</td><td>{fmt(c.tempMin ?? c.temp)}</td>
-                <td>{weatherWords(c.code)}</td><td>{c.mm.toFixed(1)} mm</td><td>{c.pop ?? 'unknown'}%</td><td>{c.uv ?? 'unknown'}</td></tr>
-            ))}
-          </tbody>
-        </table>
-      )} />
+    </>
   );
 }
