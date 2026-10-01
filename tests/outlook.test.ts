@@ -28,6 +28,10 @@ describe('outlook', () => {
     const f = forecast({ mmNow: 0.6, wetHours: { 0: wet, 1: wet, 2: wet, 3: wet, 4: wet } });
     expect(outlook(f, NOW)).toBe('Rain now, easing by 15:00');
   });
+  it('says "tomorrow" when the rain only eases after local midnight', () => {
+    const wetUntil = Object.fromEntries(Array.from({ length: 20 }, (_, i) => [i, wet]));
+    expect(outlook(forecast({ mmNow: 0.6, wetHours: wetUntil }), NOW)).toBe('Rain now, easing by 06:00 tomorrow');
+  });
   it('says rain lasts when no dry hour comes within a day', () => {
     const all = Object.fromEntries(Array.from({ length: 30 }, (_, i) => [i - 1, wet]));
     expect(outlook(forecast({ mmNow: 0.6, wetHours: all }), NOW)).toBe('Rain now, and through the next 24 hours');

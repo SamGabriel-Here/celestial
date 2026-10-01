@@ -9,10 +9,12 @@ const rainWords = (h: Hour) => (h.code >= 51 ? weatherWords(h.code) : 'rain like
 export function outlook(f: Forecast, nowMs: number): string {
   const ahead = f.hours.filter((h) => h.ms + HOUR > nowMs && h.ms < nowMs + 24 * HOUR);
   const later = ahead.filter((h) => h.ms > nowMs);
+  const today = new Date(nowMs + f.offsetSec * 1000).toISOString().slice(0, 10);
+  const when = (h: Hour) => (h.iso.slice(0, 10) > today ? `${clockLabel(h.iso)} tomorrow` : clockLabel(h.iso));
 
   if (f.current.mm > 0 || (f.quarters[0]?.mm ?? 0) > 0) {
     const dry = later.find((h) => !isWet(h));
-    return dry ? `Rain now, easing by ${clockLabel(dry.iso)}` : 'Rain now, and through the next 24 hours';
+    return dry ? `Rain now, easing by ${when(dry)}` : 'Rain now, and through the next 24 hours';
   }
 
   const quarter = f.quarters.find((q) => q.mm > 0 && q.ms < nowMs + 2 * HOUR);
@@ -21,7 +23,5 @@ export function outlook(f: Forecast, nowMs: number): string {
   const wet = ahead.find(isWet);
   if (!wet) return 'Dry for the next 24 hours';
   if (wet.ms <= nowMs) return `${capitalise(wet.code >= 51 ? weatherWords(wet.code) : 'rain')} likely within the hour`;
-  const today = new Date(nowMs + f.offsetSec * 1000).toISOString().slice(0, 10);
-  const when = wet.iso.slice(0, 10) > today ? `${clockLabel(wet.iso)} tomorrow` : clockLabel(wet.iso);
-  return `Dry until ${when}, then ${rainWords(wet)}`;
+  return `Dry until ${when(wet)}, then ${rainWords(wet)}`;
 }
