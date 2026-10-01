@@ -3,6 +3,7 @@ import { useData } from '../app/data';
 import { outlook } from '../lib/outlook';
 import { capitalise, clockLabel, compass, fmtTemp, fmtWind, localIso, weatherWords, weekday } from '../lib/units';
 import { Mark } from './Mark';
+import { Places } from './Places';
 import { Search } from './Search';
 
 export function Rail({ children }: { children?: ReactNode }) {
@@ -53,6 +54,7 @@ export function Rail({ children }: { children?: ReactNode }) {
           {children}
         </>
       )}
+      <Places />
     </aside>
   );
 }
