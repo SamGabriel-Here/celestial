@@ -7,7 +7,7 @@ import { fetchFrames, rainColour, rainIntensity, type Frame } from '../lib/rainv
 import { clockLabel, localIso } from '../lib/units';
 
 const FRAME_MS = 600;
-const RADAR_OPACITY = 0.8;
+const RADAR_OPACITY = 0.95;
 const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas';
 
 /** Radar tiles repainted from RainViewer's palette into the card's: rain blue to print white. */
@@ -53,9 +53,9 @@ export function RadarDial() {
   useEffect(() => {
     const m = L.map(el.current!, { zoomControl: false, attributionControl: false }).setView([place?.lat ?? 0, place?.lon ?? 0], 7);
     // Attribution is printed under the dial: the round window would clip Leaflet's corner credit.
-    L.tileLayer(`${ESRI}/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}`, { maxZoom: 10 }).addTo(m);
+    L.tileLayer(`${ESRI}/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}`, { maxZoom: 10, className: 'basemap' }).addTo(m);
     m.createPane('labels').style.zIndex = '450'; // place names above the radar
-    L.tileLayer(`${ESRI}/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}`, { pane: 'labels', maxZoom: 10 }).addTo(m);
+    L.tileLayer(`${ESRI}/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}`, { pane: 'labels', maxZoom: 10, className: 'basemap' }).addTo(m);
     pin.current = L.circleMarker([place?.lat ?? 0, place?.lon ?? 0], { radius: 6, color: '#ffc92e', weight: 2, fillColor: '#142d7e', fillOpacity: 1, interactive: false }).addTo(m);
     map.current = m;
     let live = true;

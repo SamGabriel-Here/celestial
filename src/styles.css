@@ -120,6 +120,8 @@ button { cursor: pointer; }
 .pointer-line { stroke: var(--sun); stroke-width: 2; }
 .dial-hint { text-align: center; font-size: 13px; color: var(--print-2); letter-spacing: .06em; margin-top: 14px; }
 .leaflet-container { background: var(--card-deep); font: 400 12px var(--sans); }
+/* Print the grey basemap in the card's night blue so the map belongs to the world. */
+.radar-map .basemap { filter: sepia(1) hue-rotate(185deg) saturate(2.2) brightness(.62); }
 .leaflet-container img.leaflet-tile { mix-blend-mode: plus-lighter; } /* hides Chrome's sub-pixel seams between tiles */
 .radar-controls { display: flex; align-items: center; justify-content: center; gap: 12px; }
 .credit { text-align: center; font-size: 11px; color: var(--print-2); margin-top: 8px; }
@@ -151,6 +153,13 @@ button { cursor: pointer; }
 .reading > :nth-child(n + 5) { animation-delay: 240ms; }
 @media (prefers-reduced-motion: reduce) {
   .reading > *, .dial-window canvas { animation: none; }
+}
+
+/* ---------- narrow desktop: keep three columns inside 1024 ---------- */
+@media (max-width: 1240px) and (min-width: 981px) {
+  :root { --dial: min(70vh, 40vw); }
+  .stage { grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr); gap: 24px; padding-inline: 24px; }
+  .temp { font-size: clamp(88px, 9vw, 120px); }
 }
 
 /* ---------- phone: dial, then reading, then details ---------- */

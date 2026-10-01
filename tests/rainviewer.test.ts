@@ -30,5 +30,11 @@ describe('repainting radar in the world’s palette', () => {
       expect(a).toBeGreaterThan(0);
     }
     expect(rainColour(1)[3]).toBeGreaterThan(rainColour(0.1)[3]);
+    // Light rain stays saturated over a dark basemap: mostly opaque, still rain blue.
+    expect(rainColour(0.1)[3]).toBeGreaterThanOrEqual(190);
+    // Light and moderate rain are exactly the rain blue; only downpours whiten.
+    expect(rainColour(0.3).slice(0, 3)).toEqual([160, 205, 255]);
+    expect(rainColour(0.6).slice(0, 3)).toEqual([160, 205, 255]);
+    expect(rainColour(1).slice(0, 3)).toEqual([243, 245, 251]);
   });
 });

@@ -30,7 +30,7 @@ export function drawSky(canvas: HTMLCanvasElement, o: SkyOpts): void {
   };
   // Bodies near the horizon are drawn just inside the rim so the window never cuts them.
   const body = (alt: number, az: number, r: number): [number, number] => {
-    const [x, y] = at(alt, az), d = Math.hypot(x - c, y - c), max = R - r - 2;
+    const [x, y] = at(alt, az), d = Math.hypot(x - c, y - c), max = R - r - Math.max(6, R * 0.05); // clear of the printed ring
     return d > max ? [c + ((x - c) * max) / d, c + ((y - c) * max) / d] : [x, y];
   };
   const sun = sunPosition(o.ms, o.lat, o.lon);

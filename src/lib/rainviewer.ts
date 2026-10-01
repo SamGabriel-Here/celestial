@@ -40,6 +40,9 @@ export function rainIntensity(r: number, g: number, b: number): number {
 /** Rain blue at the light end to print white at the heavy end; RGBA, alpha 0..255. */
 export function rainColour(i: number): [number, number, number, number] {
   const t = Math.max(0, Math.min(1, i));
-  const mix = (a: number, b: number) => Math.round(a + (b - a) * t);
-  return [mix(160, 243), mix(205, 245), mix(255, 251), Math.round(255 * (0.4 + 0.6 * t))];
+  // Rain blue up to heavy rain; only the downpour end (the warm half of RainViewer's ramp)
+  // whitens toward print white. Mostly opaque: translucent blue over a dark map reads as grey.
+  const w = Math.max(0, (t - 0.65) / 0.35);
+  const mix = (a: number, b: number) => Math.round(a + (b - a) * w);
+  return [mix(160, 243), mix(205, 245), mix(255, 251), Math.round(255 * (0.78 + 0.22 * t))];
 }
