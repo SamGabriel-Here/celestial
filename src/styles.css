@@ -103,10 +103,13 @@ button { cursor: pointer; }
 .rain2h .ticks { display: flex; justify-content: space-between; font-size: 12px; color: var(--print-2); margin-top: 4px; font-variant-numeric: tabular-nums; }
 
 /* ---------- the dial ---------- */
-.dial { position: relative; width: var(--dial); aspect-ratio: 1; }
+/* A typed custom property can transition, so the glow fades between hours instead of jumping. */
+@property --glow { syntax: '<color>'; inherits: true; initial-value: transparent; }
+.dial { position: relative; width: var(--dial); aspect-ratio: 1; transition: --glow 700ms ease; }
+@media (prefers-reduced-motion: reduce) { .dial { transition: none; } }
 /* The selected moment's sky, lit behind the instrument. */
 .dial-glow { position: absolute; inset: -24%; border-radius: 50%; pointer-events: none;
-  background: radial-gradient(circle, var(--glow, transparent) 0%, transparent 62%); opacity: .42; transition: background 700ms ease; }
+  background: radial-gradient(circle, var(--glow) 0%, transparent 62%); opacity: .42; }
 /* A star chart printed on the card around the wheel: meridians and parallels, fading out. */
 .dial::before { content: ''; position: absolute; inset: -16%; border-radius: 50%; pointer-events: none; z-index: -1;
   background:
