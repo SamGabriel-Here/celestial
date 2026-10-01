@@ -22,3 +22,15 @@ export function weekday(iso: string): string {
   const [y, m, d] = iso.slice(0, 10).split('-').map(Number) as [number, number, number];
   return DAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()] as string;
 }
+
+const WMO: Record<number, string> = {
+  0: 'clear', 1: 'mostly clear', 2: 'partly cloudy', 3: 'overcast', 45: 'fog', 48: 'rime fog',
+  51: 'light drizzle', 53: 'drizzle', 55: 'heavy drizzle', 56: 'freezing drizzle', 57: 'freezing drizzle',
+  61: 'light rain', 63: 'rain', 65: 'heavy rain', 66: 'freezing rain', 67: 'freezing rain',
+  71: 'light snow', 73: 'snow', 75: 'heavy snow', 77: 'snow grains', 80: 'showers', 81: 'showers',
+  82: 'violent showers', 85: 'snow showers', 86: 'snow showers', 95: 'thunderstorm', 96: 'thunderstorm with hail',
+  99: 'thunderstorm with hail',
+};
+/** WMO weather code in lower-case words ("light rain"). */
+export const weatherWords = (code: number): string => WMO[code] ?? 'unsettled';
+export const capitalise = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
