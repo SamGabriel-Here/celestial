@@ -1,0 +1,214 @@
+/* Celestial — a planisphere printed on cobalt card stock. */
+:root {
+  --card: #1b3a9c;
+  --card-deep: #142d7e;
+  --print: #f3f5fb;
+  --print-2: #c6d0ee;
+  --line: rgb(243 245 251 / .32);
+  --line-soft: rgb(243 245 251 / .16);
+  --sun: #ffc92e;
+  --rain: #a0cdff;
+  --disc: #2347b2; /* the rim disc: one step lighter than the card it sits on */
+  --sans: 'Jost', system-ui, sans-serif;
+  --dial: min(76vh, 46vw);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; margin: 0; }
+html { background: var(--card-deep); color: var(--print); -webkit-text-size-adjust: 100%; }
+body {
+  font: 400 16px/1.4 var(--sans); min-height: 100dvh;
+  /* Card stock: a fine fibre grain over the cobalt, darkening toward the edges. */
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .055 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E"),
+    radial-gradient(120% 90% at 50% 45%, var(--card) 55%, var(--card-deep));
+}
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+::selection { background: var(--sun); color: var(--card-deep); }
+:focus-visible { outline: 2px solid var(--sun); outline-offset: 3px; }
+* { scrollbar-color: var(--line) transparent; scrollbar-width: thin; }
+.num { font-variant-numeric: tabular-nums; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.quiet { color: var(--print-2); }
+.small { font-size: 14px; }
+
+/* ---------- header ---------- */
+.top { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 24px; padding: 20px clamp(16px, 3vw, 40px); }
+.brand .mark-sun { transform-box: view-box; transform-origin: 15px 15.5px; transform: rotate(calc(var(--mark-turn, 0deg) + var(--mark-nudge, 0deg)));
+  transition: transform 300ms cubic-bezier(.16, 1, .3, 1); }
+.brand:hover, .brand:focus-visible { --mark-nudge: 30deg; }
+.brand:focus-visible { outline-offset: 6px; border-radius: 999px; } /* round, like everything else */
+@media (prefers-reduced-motion: reduce) { .brand .mark-sun { transform: none; transition: none; } }
+.brand { display: flex; align-items: center; gap: 12px; font: 500 15px/1 var(--sans); letter-spacing: .32em; text-transform: uppercase; color: var(--print); text-decoration: none; }
+.tabs { display: flex; gap: 4px; justify-self: center; }
+.tabs a { padding: 8px 14px; font-size: 15px; color: var(--print-2); text-decoration: none; border-radius: 999px; }
+.tabs a:hover { color: var(--print); }
+.tabs a[aria-current='page'] { color: var(--card-deep); background: var(--print); }
+
+.search { position: relative; width: min(280px, 100%); }
+.search form { display: flex; border-bottom: 1px solid var(--line); }
+.search input { flex: 1; min-width: 0; background: none; border: 0; padding: 8px 2px; font-size: 16px; color: var(--print); }
+.search input::placeholder { color: var(--print-2); }
+.search input:focus-visible { outline: none; }
+.search form:focus-within { border-bottom-color: var(--sun); }
+.search form button { background: none; border: 0; color: var(--print); font: 500 13px var(--sans); letter-spacing: .2em; text-transform: uppercase; }
+.options { position: absolute; z-index: 1000; left: 0; right: 0; top: 44px; list-style: none; padding: 6px 0; background: var(--card-deep);
+  border: 1px solid var(--line); box-shadow: 0 14px 40px rgb(5 12 40 / .5); }
+.options li { padding: 9px 14px; font-size: 15px; cursor: pointer; }
+.options li[aria-selected='true'], .options li:hover { background: rgb(243 245 251 / .1); }
+.search-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: 6px; }
+.link { border: 0; background: none; padding: 0; font-size: 13px; color: var(--print-2); text-decoration: underline; text-underline-offset: 3px; }
+.link:hover { color: var(--print); }
+.notice { font-size: 14px; }
+
+/* ---------- three columns: reading | dial | details ---------- */
+.stage { overflow-x: clip; /* the glow and printed chart may spread past the dial, never past the page */
+  display: grid; grid-template-columns: minmax(260px, 1fr) auto minmax(260px, 1fr); gap: clamp(20px, 3vw, 56px);
+  align-items: start; padding: 8px clamp(16px, 3vw, 40px) 40px; min-height: calc(100dvh - 84px); }
+/* The dial and the reading hold still while a long list scrolls beside them. */
+.dial-col, .reading { position: sticky; top: 16px; }
+/* Reserve the dial's box before the forecast arrives, so nothing below it jumps. */
+.dial-col { width: var(--dial); min-height: calc(var(--dial) + 48px); }
+
+.reading { display: grid; gap: 6px; align-content: start; padding-top: 6vh; }
+.reading .place-row { display: flex; align-items: baseline; gap: 14px; }
+.reading h1 { font: 400 clamp(22px, 2vw, 30px)/1.1 var(--sans); letter-spacing: .01em; }
+.reading h1 span { color: var(--print-2); }
+.reading .when { color: var(--print-2); font-size: 15px; }
+.reading .when b { color: var(--sun); font-weight: 500; }
+.temp { font: 300 clamp(96px, 10vw, 164px)/.9 var(--sans); letter-spacing: -.04em; margin: 18px 0 4px; font-variant-numeric: tabular-nums; }
+.cond { font: 500 21px/1.2 var(--sans); }
+.feels { color: var(--print-2); font-size: 16px; }
+.answer { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line); font: 400 20px/1.35 var(--sans); max-width: 24ch; }
+.answer b { color: var(--sun); font-weight: 500; }
+.chip { border: 1px solid var(--line); background: none; padding: 3px 12px; font-size: 13px; border-radius: 999px; color: var(--print-2); }
+.chip:hover { color: var(--print); border-color: var(--print-2); }
+.chip[aria-pressed='true'] { background: var(--sun); border-color: var(--sun); color: var(--card-deep); }
+.unit { display: flex; gap: 6px; margin-top: 14px; }
+.error { display: grid; gap: 10px; }
+
+.details { display: grid; gap: 28px; align-content: start; padding-top: 6vh; }
+.details h2, .reading h2 { font: 500 12px/1 var(--sans); letter-spacing: .28em; text-transform: uppercase; color: var(--print-2); margin-bottom: 12px; }
+.at { display: grid; grid-template-columns: auto 1fr; gap: 6px 18px; font-size: 16px; }
+.at dt { color: var(--print-2); }
+.at dd { font-variant-numeric: tabular-nums; }
+.details h2.moment { font: 400 32px/1 var(--sans); letter-spacing: 0; text-transform: none; color: var(--print); margin-bottom: 14px; }
+.list { list-style: none; padding: 0; }
+.list li { display: grid; grid-template-columns: 4em 1fr auto; gap: 12px; align-items: baseline; padding: 8px 0; border-top: 1px solid var(--line-soft); font-size: 15px; }
+.list li > :first-child { color: var(--print-2); }
+.list li small { display: block; color: var(--print-2); font-size: 12px; }
+.list li .r { font-variant-numeric: tabular-nums; text-align: right; }
+.list li .r span { color: var(--print-2); }
+.list li.sel > :first-child { color: var(--sun); }
+
+.rain2h { margin-top: 22px; }
+.rain2h .bars { display: flex; align-items: flex-end; gap: 3px; height: 34px; border-bottom: 1px solid var(--line); }
+.rain2h .bars span { flex: 1; background: var(--rain); border-radius: 2px 2px 0 0; }
+.rain2h .ticks { display: flex; justify-content: space-between; font-size: 12px; color: var(--print-2); margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+/* ---------- the dial ---------- */
+/* A typed custom property can transition, so the glow fades between hours instead of jumping. */
+@property --glow { syntax: '<color>'; inherits: true; initial-value: transparent; }
+.dial { position: relative; width: var(--dial); aspect-ratio: 1; transition: --glow 700ms ease; }
+@media (prefers-reduced-motion: reduce) { .dial { transition: none; } }
+/* The selected moment's sky, lit behind the instrument. */
+.dial-glow { position: absolute; inset: -24%; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, var(--glow) 0%, transparent 62%); opacity: .42; }
+/* A star chart printed on the card around the wheel: meridians and parallels, fading out. */
+.dial::before { content: ''; position: absolute; inset: -16%; border-radius: 50%; pointer-events: none; z-index: -1;
+  background:
+    repeating-conic-gradient(from 0deg, rgb(243 245 251 / .07) 0 .35deg, transparent .35deg 15deg),
+    repeating-radial-gradient(circle, rgb(243 245 251 / .07) 0 1px, transparent 1px 7%);
+  -webkit-mask: radial-gradient(circle, transparent 47%, #000 53%, transparent 71%);
+  mask: radial-gradient(circle, transparent 47%, #000 53%, transparent 71%); }
+.dial-window { position: absolute; inset: 17%; border-radius: 50%; overflow: hidden; background: var(--card-deep); }
+/* The window is cut into the disc: an inset edge and a faint sheen of glass. */
+.dial-window::after { content: ''; position: absolute; inset: 0; border-radius: 50%; pointer-events: none; z-index: 500;
+  box-shadow: inset 0 10px 26px rgb(3 8 32 / .62), inset 0 -2px 6px rgb(243 245 251 / .08);
+  background: radial-gradient(120% 80% at 28% 12%, rgb(255 255 255 / .09), transparent 46%); }
+.dial-window canvas { display: block; width: 100%; height: 100%; animation: develop 700ms ease-out both; }
+.dial-rim { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.dial-rim .grip { fill: none; stroke: transparent; pointer-events: stroke; touch-action: none; cursor: grab; }
+.dial-rim .grip:active { cursor: grabbing; }
+.dial-rim:focus-visible { outline: none; }
+.dial-rim:focus-visible .ring-outer { stroke: var(--sun); stroke-width: 3; }
+.ring-window { fill: none; stroke: var(--print); stroke-width: 3; }
+.disc { fill: var(--disc); }
+.band { opacity: .55; }
+.tick-fine { stroke: var(--print); stroke-width: 1.2; opacity: .4; }
+.degree-scale line { stroke: rgb(243 245 251 / .28); stroke-width: 1.2; }
+.degree-scale line.long { stroke: rgb(243 245 251 / .5); stroke-width: 1.6; }
+.ring-outer { fill: none; stroke: var(--line); stroke-width: 1.5; }
+.ring-inner { fill: none; stroke: var(--line-soft); stroke-width: 1; stroke-dasharray: 2 6; }
+.tick { stroke: var(--print); stroke-width: 2; }
+.spoke { stroke: var(--rain); stroke-width: 9; stroke-linecap: round; }
+.spoke.moon { stroke: var(--print); stroke-width: 7; }
+.label text { font-family: var(--sans); text-anchor: middle; fill: var(--print); }
+.label .top { font-size: 15px; fill: rgb(243 245 251 / .62); }
+.label .bottom { font-size: 20px; font-weight: 500; }
+.label .on { fill: var(--sun); }
+.label .mark { fill: var(--sun); }
+.pointer { fill: var(--sun); }
+.pointer-line { stroke: var(--sun); stroke-width: 2; }
+.dial-hint { text-align: center; font-size: 13px; color: var(--print-2); letter-spacing: .06em; margin-top: 14px; }
+.leaflet-container { background: var(--card-deep); font: 400 12px var(--sans); }
+/* Print the grey basemap in the card's night blue so the map belongs to the world. */
+.radar-map .basemap { filter: sepia(1) hue-rotate(185deg) saturate(2.2) brightness(.62); }
+.leaflet-container img.leaflet-tile { mix-blend-mode: plus-lighter; } /* hides Chrome's sub-pixel seams between tiles */
+.radar-controls { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.credit { text-align: center; font-size: 11px; color: var(--print-2); margin-top: 8px; }
+.radar-controls input[type='range'] { flex: 1; accent-color: var(--sun); }
+
+/* ---------- detail lists (air, sun, moon) ---------- */
+.layers dl > div { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: baseline; padding: 8px 0; border-top: 1px solid var(--line-soft); font-size: 15px; }
+.layers dt small { display: block; color: var(--print-2); font-size: 12px; }
+.layers dd { font-variant-numeric: tabular-nums; }
+.rail-more { display: grid; gap: 28px; }
+
+/* ---------- saved places ---------- */
+.places ul { list-style: none; padding: 0; }
+.places li { display: grid; grid-template-columns: 1fr auto; border-top: 1px solid var(--line-soft); }
+.places .go { display: grid; grid-template-columns: 1fr auto; gap: 10px; text-align: left; border: 0; background: none; padding: 8px 0; font-size: 15px; }
+.places li[aria-current='true'] .go > span:first-child { color: var(--sun); }
+.places .go small { display: block; color: var(--print-2); font-size: 12px; }
+.places .go > span:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.places .remove { border: 0; background: none; color: var(--print-2); padding: 0 4px 0 12px; }
+.places .remove:hover { color: var(--print); }
+
+/* ---------- the one authored load ---------- */
+@keyframes develop { from { opacity: 0; filter: blur(6px); } to { opacity: 1; filter: none; } }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.reading > * { animation: rise 600ms cubic-bezier(.16, 1, .3, 1) both; }
+.reading > :nth-child(2) { animation-delay: 60ms; }
+.reading > :nth-child(3) { animation-delay: 120ms; }
+.reading > :nth-child(4) { animation-delay: 180ms; }
+.reading > :nth-child(n + 5) { animation-delay: 240ms; }
+@media (prefers-reduced-motion: reduce) {
+  .reading > *, .dial-window canvas { animation: none; }
+}
+
+/* ---------- narrow desktop: keep three columns inside 1024 ---------- */
+@media (max-width: 1240px) and (min-width: 981px) {
+  :root { --dial: min(70vh, 40vw); }
+  .stage { grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr); gap: 24px; padding-inline: 24px; }
+  .temp { font-size: clamp(88px, 9vw, 120px); }
+}
+
+/* ---------- phone: reading, then dial, then details ---------- */
+@media (max-width: 980px) {
+  :root { --dial: min(calc(100vw - 32px), 560px); }
+  .top { grid-template-columns: 1fr auto; padding: 14px 16px; }
+  .search { grid-column: 1 / -1; width: 100%; }
+  .tabs { position: fixed; z-index: 1001; left: 0; right: 0; bottom: 0; justify-self: stretch; justify-content: space-around; gap: 0;
+    padding: 8px 4px calc(8px + env(safe-area-inset-bottom)); background: var(--card-deep); border-top: 1px solid var(--line); }
+  .tabs a { font-size: 14px; padding: 8px 10px; }
+  .stage { grid-template-columns: 1fr; padding: 0 16px 96px; gap: 28px; }
+  .dial-col { justify-self: center; position: static; }
+  /* The rim is drawn in 1000 units; on a phone that makes 15/20 unreadable, so enlarge and re-space. */
+  .label .top { font-size: 24px; transform: translateY(-10px); }
+  .label .bottom { font-size: 32px; transform: translateY(10px); }
+  .label .mark { transform: translateY(-16px); }
+  .reading, .details { position: static; padding-top: 0; }
+  .temp { font-size: 104px; }
+}

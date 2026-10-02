@@ -1,0 +1,141 @@
+/* Celestial's landing page: the app's own instrument, held on the page while the scroll turns it. */
+:root {
+  --hdr: 64px;
+  --pad: clamp(16px, 3vw, 40px);
+  --ease: cubic-bezier(.23, 1, .32, 1);
+}
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+body.about { overflow-x: clip; }
+
+/* Pinned acts: a tall section whose stage holds the screen while the scroll passes through it. */
+.day-act { height: 420svh; }
+.days-act { height: 200svh; }
+.close-act { height: 100svh; }
+.day-stage, .close-stage { position: sticky; top: 0; height: 100svh; overflow: clip; }
+.about { --dial: min(calc(100svh - var(--hdr) - 72px), 44vw); }
+.about a { color: inherit; text-underline-offset: 3px; }
+
+/* ---------- chrome: the app's header, fixed, its tabs jumping to the acts ---------- */
+.about-top { position: fixed; z-index: 60; inset: 0 0 auto; height: var(--hdr); padding-block: 0;
+  background: var(--card); border-bottom: 1px solid var(--line-soft); }
+.tabs .absent { visibility: hidden; }
+.open-link { justify-self: end; padding: 7px 16px; border: 1px solid var(--print); border-radius: 999px;
+  font: 500 14px/1.2 var(--sans); text-decoration: none; transition: background-color 160ms ease-out, color 160ms ease-out; }
+.open-link:hover { background: var(--print); color: var(--card-deep); }
+.open-link:active { transform: translateY(1px); }
+
+/* ---------- 1 · the day turns ---------- */
+.day-stage { display: grid; grid-template-columns: minmax(240px, 1fr) auto minmax(240px, 1fr); align-items: center;
+  gap: clamp(24px, 3vw, 56px); padding: calc(var(--hdr) + 12px) var(--pad) 20px; }
+.day-stage .reading, .day-stage .details { position: static; padding-top: 0; }
+.day-stage .dial-col { position: static; width: var(--dial); min-height: 0; }
+.day-stage .reading > * { animation: none; }
+.day-stage .temp { margin-top: 14px; }
+.guess { margin-top: 20px; max-width: 30ch; }
+.temp.pending { color: var(--line); } /* a reading not yet in */
+.cond.quiet { font-weight: 400; font-size: 16px; }
+.forecast-state { margin-top: 4px; display: grid; gap: 12px; justify-items: start; max-width: 30ch; font-size: 16px; line-height: 1.45; }
+.day-stage .dial-hint { font-size: 15px; letter-spacing: .01em; color: var(--print); max-width: 34em; margin-inline: auto; transition: opacity 400ms var(--ease); }
+.day-stage .dial-hint.done { opacity: 0; }
+.day-stage .dial-hint.claim { font-size: clamp(16px, 1.35vw, 20px); line-height: 1.35; text-wrap: balance; }
+.day-stage .dial-hint.claim .link { color: var(--print); }
+.day-stage .dial-hint.claim span { color: var(--print-2); }
+.day-stage .dial-hint.nightfall { font-size: clamp(16px, 1.35vw, 20px); }
+.day-stage .temp { font-size: clamp(64px, 6.4vw, 96px); } /* the claim leads, not the temperature */
+.tabs a[aria-current='location'] { color: var(--card-deep); background: var(--print); }
+.link { border: 0; background: none; padding: 0; font: inherit; color: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.change-form { margin-top: 18px; display: grid; gap: 8px; max-width: 22rem; }
+.change-row { display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--print-2); }
+.change-row:focus-within { border-bottom-color: var(--sun); box-shadow: 0 1px 0 var(--sun); }
+.change-row input { flex: 1; min-width: 0; background: none; border: 0; padding: 8px 2px; font-size: 16px; color: var(--print); }
+.change-row input::placeholder { color: var(--print-2); }
+.change-row input:focus-visible { outline: none; }
+.change-row button[type='submit'] { background: none; border: 0; color: var(--print); font: 500 13px var(--sans); letter-spacing: .14em; text-transform: uppercase; }
+.change-row .link { font-size: 13px; color: var(--print-2); }
+.hint { font-size: 16px; line-height: 1.5; max-width: 34ch; min-height: 7.5em; margin-bottom: 14px; }
+
+/* ---------- 2 · sixteen days: the same instrument, a day per step ---------- */
+.about h2:not(.moment):not(.day-name) { font: 500 12px/1 var(--sans); letter-spacing: .28em; text-transform: uppercase; color: var(--print-2); margin-bottom: 14px; }
+.about .reading h2.day-name { font: 400 clamp(22px, 2vw, 30px)/1.1 var(--sans); letter-spacing: .01em; text-transform: none; color: var(--print); margin: 0; }
+.ranges { list-style: none; padding: 0; margin-top: 18px; display: grid; gap: 1px; font-size: 13px; }
+.ranges li { display: grid; grid-template-columns: 4.5em 1fr 4.5em; align-items: center; gap: 10px; padding: 2px 0; color: var(--print-2); }
+.ranges .track { position: relative; height: 4px; border-radius: 2px; background: var(--line-soft); }
+.ranges .track i { position: absolute; top: 0; bottom: 0; border-radius: 2px; background: var(--print-2); }
+.ranges .num { text-align: right; font-variant-numeric: tabular-nums; }
+.ranges li.sel { color: var(--print); }
+.ranges li.sel .track i { background: var(--sun); }
+
+/* ---------- 3 · where it comes from ---------- */
+.how-act { padding-block: clamp(3rem, 6vw, 6rem) clamp(4rem, 9vw, 9rem); }
+.how-wrap { max-width: 72rem; margin-inline: auto; padding-inline: var(--pad); display: grid; align-items: center; justify-content: center;
+  grid-template-columns: minmax(160px, 15rem) minmax(0, 34rem); gap: clamp(32px, 7vw, 112px); }
+.moon canvas { width: 100%; aspect-ratio: 1; filter: drop-shadow(0 14px 28px rgb(5 12 46 / .55)); }
+.moon figcaption { margin-top: 18px; color: var(--print-2); font-size: 15px; max-width: 30ch; }
+.how-text { display: grid; gap: 16px; font-size: 18px; line-height: 1.55; }
+.how-text p { max-width: 58ch; text-wrap: pretty; }
+
+/* Arrives once, on entry: the moon opens as an iris, the paragraphs rise in reading order. */
+.moon { clip-path: circle(0% at 50% 42%); transition: clip-path 1100ms var(--ease); }
+.how-text > * { opacity: 0; transform: translateY(14px); transition: opacity 620ms var(--ease), transform 620ms var(--ease); }
+.how-act.in .moon { clip-path: circle(75% at 50% 50%); }
+.how-act.in .how-text > * { opacity: 1; transform: none; }
+.how-text > :nth-child(2) { transition-delay: 70ms; }
+.how-text > :nth-child(3) { transition-delay: 140ms; }
+.how-text > :nth-child(4) { transition-delay: 210ms; }
+
+/* ---------- 4 · your sky ---------- */
+.close-stage { display: grid; grid-template-columns: minmax(0, 1fr); align-content: center; padding: var(--hdr) clamp(16px, 7vw, 120px) 56px; }
+.close-plate { position: absolute; width: min(120svh, 96vw); aspect-ratio: 1; right: -22vw; top: 50%; translate: 0 -50%; pointer-events: none; }
+.close-ring { position: absolute; inset: 0; width: 100%; height: 100%; fill: none; stroke: var(--line-soft); stroke-width: 1.5; }
+.close-sky { position: absolute; inset: 17%; border-radius: 50%; overflow: hidden; opacity: .9; }
+.close-sky canvas { display: block; width: 100%; height: 100%; }
+.close-ring line { stroke: var(--line); }
+.close-inner { position: relative; display: grid; gap: 26px; width: 100%; max-width: 34rem; min-width: 0; }
+.about .close-inner h2.close-q { font: 300 clamp(44px, 6vw, 84px)/1 var(--sans); letter-spacing: -.02em; text-transform: none; color: var(--print); margin: 0; }
+.close-form { display: flex; gap: 12px; border-bottom: 1px solid var(--print-2); }
+.close-form:focus-within { border-bottom-color: var(--sun); box-shadow: 0 1px 0 var(--sun); } /* a 2px line: the field's focus ring */
+.close-form input { flex: 1; min-width: 0; background: none; border: 0; padding: 10px 2px; font-size: 22px; color: var(--print); }
+.close-form input::placeholder { color: var(--print-2); }
+.close-form input:focus-visible { outline: none; }
+.close-form button { background: none; border: 0; padding: 0 2px; white-space: nowrap; color: var(--print);
+  font: 500 14px var(--sans); letter-spacing: .2em; text-transform: uppercase; }
+.close-form button:hover { color: var(--sun); }
+.close-form button:active { transform: translateY(1px); }
+.foot { position: absolute; left: clamp(16px, 7vw, 120px); bottom: 20px; }
+
+/* ---------- phone: the place and the reading above the wheel, the status line below ---------- */
+@media (max-width: 980px) {
+  :root { --hdr: 56px; }
+  /* The wheel takes what the screen has left after the reading, the instruction line and the hint. */
+  .about { --dial: min(calc(100vw - 32px), calc(100svh - 440px)); }
+  .about-top { grid-template-columns: 1fr auto; padding-inline: 16px; }
+  .about { --tabbar: 52px; }
+  .day-stage, .close-stage { padding-bottom: calc(var(--tabbar) + 12px); }
+  .day-stage { grid-template-columns: 1fr; align-content: center; align-items: start; justify-items: center; gap: 12px;
+    padding: calc(var(--hdr) + 10px) 16px 12px; }
+  .day-stage .reading { width: 100%; display: grid; grid-template-columns: 1fr auto; column-gap: 12px; row-gap: 2px; }
+  .day-stage .reading h1 { grid-column: 1; font-size: 22px; }
+  .day-stage .reading .when { grid-column: 1; }
+  .day-stage .temp { grid-column: 2; grid-row: 1 / span 3; align-self: center; font-size: 64px; margin: 0; }
+  .day-stage .cond, .day-stage .feels { grid-column: 1; font-size: 15px; }
+  .day-stage .guess { grid-column: 1 / -1; margin-top: 4px; max-width: none; }
+  .day-stage .change-form { grid-column: 1 / -1; margin-top: 4px; max-width: none; }
+  .day-stage .forecast-state { grid-column: 1 / -1; margin-top: 6px; max-width: none; font-size: 15px; }
+  .day-stage .details { width: 100%; }
+  .day-stage .details h2, .day-stage .details .at, .ranges { display: none; }
+  .about .day-stage .reading h2.day-name { grid-column: 1; font-size: 22px; }
+  .hint { min-height: 7.5em; max-width: none; font-size: 15px; margin: 0; } /* reserved: the hint changes as the wheel turns */
+  .how-wrap { grid-template-columns: 1fr; justify-items: start; }
+  .moon { width: min(60vw, 16rem); }
+  .close-plate { width: 150vw; right: -75vw; }
+  .close-form input { font-size: 19px; }
+  .close-form button { letter-spacing: .12em; }
+}
+/* Short phones: the claim under the wheel carries the message; the longer note would run under the tab bar. */
+@media (max-width: 980px) and (max-height: 700px) { .day-stage .hint { display: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .open-link, .close-form button, .day-stage .dial-hint { transition: none; }
+  .moon { clip-path: none; transition: none; }
+  .how-text > * { transform: none; transition: opacity 220ms ease-out; }
+}

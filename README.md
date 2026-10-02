@@ -1,138 +1,104 @@
 <div align="center">
 
+<img src="docs/logo.svg" width="72" alt="" />
+
 # Celestial
 
-**Weather under the sky you are actually looking at.**
+**The real sky over any place, on a star wheel you turn.**
 
-[![Live](https://img.shields.io/badge/live-celestialsky.vercel.app-1478C8)](https://celestialsky.vercel.app)
+[![Live](https://img.shields.io/badge/live-celestialsky.vercel.app-1b3a9c)](https://celestialsky.vercel.app)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-[![React](https://img.shields.io/badge/React-18-61dafb)](https://react.dev)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6)](https://www.typescriptlang.org)
-[![Vite](https://img.shields.io/badge/Vite-5-646cff)](https://vite.dev)
+[![React](https://img.shields.io/badge/React-19-61dafb)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6)](https://www.typescriptlang.org)
 
-[**Open the app →**](https://celestialsky.vercel.app)
+[**Open the app →**](https://celestialsky.vercel.app) · [Take the tour: scroll through a day over your city →](https://celestialsky.vercel.app/about)
 
-![Celestial showing current conditions for Reykjavik at night](docs/now.png)
+![Tokyo at night: the real stars, a waning moon rising in the east, and the next 24 hours printed around the rim](docs/now.png)
 
 </div>
 
-Most weather apps give you a table of numbers. Celestial renders the sky the chosen
-city is under — gradient by local phase, stars, drifting cloud, rain, snow, lightning,
-fog — and floats the readings on glass above it. The moon is real: it is carved to
-tonight's actual phase, so a new moon gives off almost nothing.
+Celestial is a weather app built like a planisphere. In the middle is a round window onto the
+sky over the place you searched — the sun, the moon at its actual phase, the brightest stars
+where they really are, today's sun path, and the cloud and rain the forecast expects. Around it
+is a printed rim. Turn it, and the window shows the sky at that moment.
 
-The interface reads the sky too. Chrome contrast follows it, so a noon sky gets light
-panels and midnight gets dark ones, and you can pin either in Settings.
+Nothing in the window is decoration. Every position is computed from the date and the
+coordinates; every veil of cloud and streak of rain is that hour's forecast.
+
+## Four wheels
+
+| View | The window shows | The rim holds |
+|---|---|---|
+| **Next 24 hours** | the sky at the chosen hour | each hour's temperature, with a rain spoke whose length is the amount |
+| **16 days** | each day's noon sky and cloud | sixteen days: high, low and rain total |
+| **Radar** | rain radar, clipped to the round window | the last two hours in ten-minute frames |
+| **Air & sky** | the sky now, stars and all | the coming lunar month; each spoke is how much of the moon is lit |
+
+Beside the wheel: the temperature, and one line that answers the question you opened the app
+for — *"Dry until 18:00, then light rain"*, *"Rain now, easing by 06:00 tomorrow"* — with a
+rain timeline for the next two hours in fifteen-minute steps.
+
+| | |
+|---|---|
+| ![Live radar over Bergen inside the window, the last two hours of frames on the rim](docs/radar.png) | ![The sky over Tokyo with the lunar month around the rim, and air quality beside it](docs/air.png) |
+| **Radar** — Bergen's rain, frames on the rim | **Air & sky** — the moon's month, air quality, sun and moon |
 
 ## Try it
 
 ```
 https://celestialsky.vercel.app/?q=Reykjavik
 https://celestialsky.vercel.app/?q=Tokyo#/air
-https://celestialsky.vercel.app/?q=Bergen#/hourly
+https://celestialsky.vercel.app/?q=Bergen&t=6#/now
 ```
 
-`?q=` opens straight onto a city, and the address bar keeps up as you search, so any
-view is linkable. Views live on the hash: `#/now`, `#/hourly`, `#/forecast`, `#/air`,
-`#/settings`. Press `/` to jump to the search box.
+Every state is a link: `?q=` names the place (or `?at=lat,lon`), the hash picks the view, and
+`t` is the position of the wheel. Press `/` to search. Drag the rim, scroll over it, or use the
+arrow keys; `Home` and `End` jump to either end.
 
-| | |
-|---|---|
-| ![Hourly outlook with a temperature curve](docs/hourly.png) | ![Air quality, sun cycle and moon cycle](docs/air.png) |
-| **Hourly** — a temperature curve over the next 36 hours | **Air & Sun** — air quality, daylight, and tonight's moon |
+It also **installs** as an app, and keeps the last forecast for each place you've opened, so it
+still answers with no connection (it says *"as of 20:15"* when it does). Save the places you
+check; their temperatures arrive in a single request.
 
-## What it shows
+## How it works
 
-- **Now** — conditions, feels-like, humidity, wind with gusts and compass point, pressure against average, visibility, cloud cover, and a dew point derived from the reading
-- **Hourly** — a smoothed temperature curve plus per-step precipitation odds and wind
-- **Forecast** — five days, each with a range bar scaled across the whole week
-- **Air & Sun** — AQI with the six pollutants, a daylight arc tracking the sun's position, and the moon's phase, illumination and place in the 29.5-day cycle
-- **Settings** — °C/°F, chrome that follows the sky or stays put, recent searches, and a session API key
+No backend and no API keys. Forecasts, air quality and place search come straight from
+[Open-Meteo](https://open-meteo.com); radar frames from [RainViewer](https://www.rainviewer.com).
 
-Temperatures are always fetched in metric and converted in the browser, so switching
-units costs no request. Every time is rendered in the *searched city's* local time,
-not yours.
+| Path | What it does |
+| --- | --- |
+| `src/lib/astro.ts` | Sun, moon and star positions; moon phase by ecliptic elongation; next full/new moon; polar day and night |
+| `src/lib/openmeteo.ts` | Requests and parsing. Hour labels come from the API's local wall-clock strings, so DST and odd offsets (+05:45, −10:00) stay right |
+| `src/lib/outlook.ts` | The one-line answer |
+| `src/lib/columns.ts` | Hours and days → what the rim and window need |
+| `src/lib/url.ts`, `places.ts` | Every view as a URL; settings and saved places on the device |
+| `src/dial/Dial.tsx` | The rim: an SVG wheel you can drag, scroll or step through |
+| `src/dial/SkyWindow.tsx` | The window: the sky drawn on a canvas in azimuthal projection, east on the left as you'd see it looking up |
+| `src/views/` | The four wheels; Radar (Leaflet) and Air load only when opened |
 
-## The API key never reaches the browser
-
-Requests go to `/api/weather`, and the serverless function attaches the key from an
-environment variable. It is not an open proxy: five upstream endpoints are reachable
-by a `resource` name and exactly six query parameters are forwarded — anything else,
-including a client-supplied `appid`, is dropped. Successful responses carry
-`s-maxage=600` so the edge absorbs repeat traffic; errors are never cached.
-
-**Deploying your own:** set `OPENWEATHER_API_KEY` in your Vercel project settings and
-redeploy. That is the whole setup.
-
-**Without a proxy:** put a key in `VITE_OPENWEATHER_API_KEY`, or paste one into the
-app's setup panel — that one is held in memory for the session and never stored. A key
-supplied either way overrides the proxy, and is visible to anyone who views source, so
-do not ship one that way publicly.
-
-Keys are free at [openweathermap.org/api](https://openweathermap.org/api) and take up
-to two hours to activate.
+The astronomy uses the SunCalc formulas with the main periodic lunar terms from Meeus, which puts
+full and new moons within about two hours of the published times. The tests check it against
+real events: the solstice sun over Greenwich, the full and new moons of January 2025, Polaris
+at the observer's latitude, and polar night in Tromsø.
 
 ## Run it
 
 ```bash
 npm install
 npm run dev        # http://localhost:4180
-npm run build      # typecheck, then bundle to dist/
+npm test           # unit tests (Vitest)
 npm run typecheck
+npm run build && npm run preview
+npm run smoke      # with the preview running: three places, desktop and phone, offline, saved places
 ```
 
-`npm run dev` serves the client only. To exercise the serverless function as well:
+Needs Node 20 or newer. No environment variables.
 
-```bash
-OPENWEATHER_API_KEY=your-key npx vercel dev
-```
+## Credits
 
-Without a proxy the app notices and asks for a key rather than failing silently.
-
-## How it is put together
-
-| Path | Responsibility |
-| --- | --- |
-| `api/weather.js` | Serverless proxy; holds the key, allowlists upstreams and params |
-| `src/lib/config.ts` | Proxy-versus-direct mode, endpoints, tunables |
-| `src/lib/api.ts` | Every `fetch`; timeouts, aborts, human-readable error mapping |
-| `src/lib/transform.ts` | Raw payloads → flat view models (pure functions) |
-| `src/lib/format.ts` | Units, timezone-aware dates, compass points, relative time |
-| `src/lib/sky.ts` | Condition code + local hour → sky palette and particle layers |
-| `src/lib/moon.ts` | Lunar phase from the clock; needs no API data |
-| `src/components/SkyCanvas.tsx` | The animated sky: one canvas, one loop |
-| `src/app/store.tsx` | All state, and the only place that calls the API |
-| `src/app/router.tsx` | Hash routing, hand-rolled — five static routes |
-
-Data flows one way: `api → transform → ui`. The view layer never fetches; `api.ts` and
-`transform.ts` never touch the DOM. That split is why the rewrite from vanilla JS to
-React replaced only the views — the three pure layers ported across with types added.
-
-## Endpoints
-
-Named by the `resource` the client sends to the proxy:
-
-| `resource` | Upstream | Purpose |
-| --- | --- | --- |
-| `geocode` | `/geo/1.0/direct` | city name → coordinates |
-| `reverse` | `/geo/1.0/reverse` | coordinates → place name, for geolocation |
-| `current` | `/data/2.5/weather` | current conditions |
-| `forecast` | `/data/2.5/forecast` | 5 days in 3-hour steps; feeds hourly *and* daily |
-| `air` | `/data/2.5/air_pollution` | air quality; optional, never blocks the page |
-
-## Worth knowing
-
-- **Hourly steps are three hours apart.** That is the free tier's resolution; true
-  per-hour data needs the paid One Call plan.
-- **Recent searches are memory-only** and clear on reload, by design. Unit and chrome
-  preference are the only things stored.
-- **Auto-refresh** every 10 minutes while the tab is visible, plus a catch-up when you
-  return to a stale tab. A failed background refresh keeps the last good reading rather
-  than blanking the page.
-- **Reduced motion** is honoured: the sky paints a single static frame.
-- **Moon phase** uses the mean synodic approximation — a few hours' drift at worst,
-  well below the resolution of "waning crescent, 11% lit".
+Weather and air quality: [Open-Meteo](https://open-meteo.com) (CC BY 4.0). Radar:
+[RainViewer](https://www.rainviewer.com). Radar basemap: Esri, HERE, Garmin, © OpenStreetMap
+contributors. Typeface: [Jost](https://fonts.google.com/specimen/Jost) (OFL).
 
 ## License
 
-[MIT](LICENSE) — do what you like with it.
+[MIT](LICENSE)

@@ -1,0 +1,110 @@
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { useEffect, useRef, useState } from 'react';
+import { useData } from '../app/data';
+import { Dial, type Segment } from '../dial/Dial';
+import { fetchFrames, rainColour, rainIntensity, type Frame } from '../lib/rainviewer';
+import { clockLabel, zonedIso } from '../lib/units';
+
+const FRAME_MS = 600;
+const RADAR_OPACITY = 0.95;
+const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas';
+
+/** Radar tiles repainted from RainViewer's palette into the card's: rain blue to print white. */
+class RadarLayer extends L.GridLayer {
+  constructor(private url: string, options: L.GridLayerOptions) { super(options); }
+  createTile(coords: L.Coords, done: L.DoneCallback): HTMLElement {
+    const tile = document.createElement('canvas');
+    tile.width = tile.height = 256;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const g = tile.getContext('2d', { willReadFrequently: true })!;
+      g.drawImage(img, 0, 0);
+      const data = g.getImageData(0, 0, 256, 256);
+      const p = data.data;
+      for (let i = 0; i < p.length; i += 4) {
+        if (!p[i + 3]) continue;
+        const [r, gg, b, a] = rainColour(rainIntensity(p[i]!, p[i + 1]!, p[i + 2]!));
+        p[i] = r; p[i + 1] = gg; p[i + 2] = b; p[i + 3] = Math.round((a * p[i + 3]!) / 255);
+      }
+      g.putImageData(data, 0, 0);
+      done(undefined, tile);
+    };
+    img.onerror = () => done(new Error('Radar tile unavailable'), tile);
+    img.src = L.Util.template(this.url, coords as unknown as Record<string, number>);
+    return tile;
+  }
+}
+
+/** Radar in the dial's window; the rim holds the last two hours of frames. */
+export function RadarDial() {
+  const { place, forecast } = useData();
+  const el = useRef<HTMLDivElement>(null);
+  const map = useRef<L.Map | null>(null);
+  const pin = useRef<L.CircleMarker | null>(null);
+  const layers = useRef<L.GridLayer[]>([]);
+  const [frames, setFrames] = useState<Frame[]>([]);
+  const [idx, setIdx] = useState(0);
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const [playing, setPlaying] = useState(!reduced);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    const m = L.map(el.current!, { zoomControl: false, attributionControl: false }).setView([place?.lat ?? 0, place?.lon ?? 0], 7);
+    // Attribution is printed under the dial: the round window would clip Leaflet's corner credit.
+    L.tileLayer(`${ESRI}/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}`, { maxZoom: 10, className: 'basemap' }).addTo(m);
+    m.createPane('labels').style.zIndex = '450'; // place names above the radar
+    L.tileLayer(`${ESRI}/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}`, { pane: 'labels', maxZoom: 10, className: 'basemap' }).addTo(m);
+    pin.current = L.circleMarker([place?.lat ?? 0, place?.lon ?? 0], { radius: 6, color: '#ffc92e', weight: 2, fillColor: '#142d7e', fillOpacity: 1, interactive: false }).addTo(m);
+    map.current = m;
+    let live = true;
+    fetchFrames().then((fs) => {
+      if (!live) return;
+      if (!fs.length) return setFailed(true);
+      layers.current = fs.map((f) => new RadarLayer(f.url, { opacity: 0, maxNativeZoom: 7, maxZoom: 10 }).addTo(m));
+      setFrames(fs);
+      setIdx(fs.length - 1);
+    }).catch(() => live && setFailed(true));
+    return () => { live = false; m.remove(); map.current = null; layers.current = []; };
+    // Deps deliberately empty: the map is created once; place changes pan it below.
+  }, []);
+
+  useEffect(() => {
+    if (!place) return;
+    map.current?.setView([place.lat, place.lon], map.current.getZoom());
+    pin.current?.setLatLng([place.lat, place.lon]);
+  }, [place?.id]);
+
+  useEffect(() => { layers.current.forEach((l, i) => l.setOpacity(i === idx ? RADAR_OPACITY : 0)); }, [idx, frames]);
+
+  useEffect(() => {
+    if (!playing || frames.length < 2) return;
+    const t = setInterval(() => setIdx((i) => (i + 1) % frames.length), FRAME_MS);
+    return () => clearInterval(t);
+  }, [playing, frames.length]);
+
+  const time = (f: Frame) => clockLabel(zonedIso(f.time, forecast?.timezone ?? 'UTC'));
+  const segments: Segment[] = frames.length
+    ? frames.map((f, k) => ({ key: String(f.time), top: time(f).slice(0, 2), bottom: time(f).slice(2), mark: k === frames.length - 1 }))
+    : [{ key: 'wait', top: '', bottom: '' }];
+  const frame = frames[idx];
+
+  return (
+    <>
+      <Dial turnMs={250} segments={segments} index={Math.min(idx, segments.length - 1)} onIndex={(i) => { setPlaying(false); setIdx(i); }}
+        label="Turn the wheel through the last two hours of radar" valueText={frame ? `${time(frame)} local` : 'Loading radar'}>
+        <div ref={el} className="radar-map" style={{ width: '100%', height: '100%' }} role="region" aria-label="Rain radar map" />
+      </Dial>
+      <div className="radar-controls dial-hint">
+        {failed ? <span role="status">Radar is unavailable right now. The two-hour rain timeline still works.</span> : (
+          <>
+            <button type="button" className="chip" onClick={() => setPlaying((p) => !p)} disabled={frames.length < 2}>{playing ? 'Pause' : 'Play'}</button>
+            <span className="num">{frame ? `${time(frame)}${idx === frames.length - 1 ? ' · latest' : ''}` : 'Loading radar…'}</span>
+          </>
+        )}
+      </div>
+      <p className="credit">Basemap © Esri, HERE, Garmin, © OpenStreetMap contributors · Radar © RainViewer</p>
+    </>
+  );
+}
