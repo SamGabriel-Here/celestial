@@ -5,11 +5,11 @@ import { drawMoon, SkyWindow } from '../dial/SkyWindow';
 import { moonPhase, nextPhase, phaseName, sunPosition } from '../lib/astro';
 import { dayColumns, hourColumns } from '../lib/columns';
 import { fetchForecast, geocode, placeId } from '../lib/openmeteo';
-import { loadSettings } from '../lib/places';
+import { loadSettings, saveSettings } from '../lib/places';
 import { skyColour } from '../lib/sky';
 import type { Forecast, Place } from '../lib/types';
 import { capitalise, clockLabel, fmtTemp, offsetAt, weatherWords, weekday, zonedIso, type Unit } from '../lib/units';
-import { buildUrl } from '../lib/url';
+import { buildUrl, parseUrl } from '../lib/url';
 import { HOLD, nightfall, skyTime, zoneCity } from './model';
 import { ZONES } from './zones';
 
@@ -25,6 +25,8 @@ const STEP = 120e3; // the window's sky is recomputed every two minutes of the t
  * app, else the city the browser's time zone is named after, else London.
  */
 function choosePlace(): Pick {
+  const u = parseUrl(location.href); // a place chosen on the tour lives in its address, so a reload or a link keeps it
+  if (u.at) return { place: { id: placeId(u.at.lat, u.at.lon), name: u.q ?? 'Your place', country: '', lat: u.at.lat, lon: u.at.lon }, why: 'chosen' };
   const last = loadSettings().last;
   if (last) return { place: last, why: 'last' };
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone, city = zoneCity(zone), z = city ? ZONES[city] : undefined;
@@ -76,10 +78,14 @@ export function About() {
         <a className="open-link" href={open}>Open the sky</a>
       </header>
       <main>
-        <DayAct f={f} pick={pick} status={status} unit={unit} retry={() => setAttempt((n) => n + 1)} choose={(p) => setPick({ place: p, why: 'chosen' })} />
+        <DayAct f={f} pick={pick} status={status} unit={unit} retry={() => setAttempt((n) => n + 1)} choose={(p) => {
+          setPick({ place: p, why: 'chosen' });
+          history.replaceState(null, '', `${location.pathname}?q=${encodeURIComponent(p.name)}&at=${p.lat},${p.lon}`);
+          saveSettings({ ...loadSettings(), last: p });
+        }} />
         {f && <DaysAct f={f} place={place} unit={unit} />}
         <HowAct place={place} tz={tz} />
-        <CloseAct place={place} open={open} />
+        <CloseAct place={place} open={open} f={f} />
       </main>
     </>
   );
@@ -162,10 +168,12 @@ function DayAct({ f, pick, status, unit, retry, choose }: { f?: Forecast; pick: 
   // Nightfall is the page's moment: in the evening before it the figures are held back, then they draw on
   // over the first forty minutes of night while the stars' names come up, and a caption marks it.
   const sinceDusk = dusk ? ms - dusk : -Infinity;
-  const evening = dusk !== null && sinceDusk < 0 && sinceDusk > -3 * HOUR;
-  const figures = evening ? 0 : sinceDusk >= 0 && sinceDusk < 40 * 60e3 ? sinceDusk / (40 * 60e3) : 1;
-  const names = sinceDusk >= 0 && sinceDusk < 3 * HOUR ? 0.55 + 0.4 * Math.min(1, sinceDusk / (40 * 60e3)) : 0.55;
-  const atNightfall = sinceDusk >= 0 && sinceDusk < 3 * HOUR;
+  const DRAW = 50 * 60e3, LEAD = 20 * 60e3; // the figures draw on from 20 minutes before nightfall to 30 after
+  const drawn = (sinceDusk + LEAD) / DRAW;
+  const evening = dusk !== null && drawn < 0 && sinceDusk > -3 * HOUR;
+  const figures = evening ? 0 : drawn >= 0 && drawn < 1 ? drawn : 1;
+  const names = drawn >= 0 && sinceDusk < 3 * HOUR ? 0.55 + 0.4 * Math.min(1, drawn) : 0.55;
+  const atNightfall = drawn >= 0 && sinceDusk < 3 * HOUR; // from the moment the figures start to draw
   const skyLabel = `The sky over ${place.name} ${iso ? `at ${at}` : ahead}${c ? `: ${weatherWords(c.code)}, ${cloud}% cloud` : ''}`;
   const [editing, setEditing] = useState(false);
 
@@ -193,7 +201,10 @@ function DayAct({ f, pick, status, unit, retry, choose }: { f?: Forecast; pick: 
               <p className="feels" aria-hidden="true">&nbsp;</p>
             </>
           )}
-          {editing ? <ChangePlace choose={(p) => { setEditing(false); choose(p); }} cancel={() => setEditing(false)} /> : (
+          {editing ? <ChangePlace choose={(p) => {
+            setEditing(false); choose(p);
+            requestAnimationFrame(() => document.querySelector<HTMLElement>('.guess .link')?.focus()); // keep focus in the tour
+          }} cancel={() => setEditing(false)} /> : (
             <p className="guess small quiet">
               {why === 'last' ? 'The last place you opened' : why === 'zone' ? 'Guessed from your time zone' : why === 'chosen' ? 'Your choice' : 'London, until you choose a place'}
               {' · '}<button type="button" className="link" onClick={() => setEditing(true)}>Change</button>
@@ -205,13 +216,13 @@ function DayAct({ f, pick, status, unit, retry, choose }: { f?: Forecast; pick: 
           <Dial segments={segments} index={i} onIndex={() => {}} turnMs={420} label="The next 24 hours"
             valueText={c ? `${at}, ${weatherWords(c.code)}` : at} glow={skyColour(sun.alt, cloud).horizon}>
             <SkyWindow ms={ms} lat={place.lat} lon={place.lon} low={c?.low ?? 0} mid={c?.mid ?? 0} high={c?.high ?? 0} mm={c?.mm ?? 0}
-              figures={figures} names={names} label={skyLabel} />
+              figures={figures} names={names} print label={skyLabel} />
           </Dial>
           </div>
           <p className="sr">{skyLabel}</p>
           {/* Under the wheel: the claim and the one instruction at rest, then the nightfall caption. */}
           <p className={`dial-hint ${step === 0 ? 'claim' : atNightfall ? 'nightfall' : 'done'}`}>
-            {step === 0 ? <>The real sky over {place.name}, right now. <span>Scroll to turn it through tomorrow.</span></>
+            {step === 0 ? <>The real sky over {place.name}, right now.{why === 'zone' && <> <button type="button" className="link" onClick={() => setEditing(true)}>Not {place.name}?</button></>} <span>Scroll to turn it through tomorrow.</span></>
               : `Nightfall over ${place.name}${nightAt ? ` · ${nightAt}` : ''}${cloud > 60 ? ` · the stars are behind ${cloud}% cloud` : ''}`}
           </p>
         </div>
@@ -286,9 +297,10 @@ function DaysAct({ f, place, unit }: { f: Forecast; place: Place; unit: Unit }) 
         <div className="reading">
           <h2 className="day-name">{name(c.iso, i)}</h2>
           <p className="when num">Noon · {i ? `in ${i} ${i === 1 ? 'day' : 'days'}` : 'today'}</p>
-          <p className="temp">{fmtTemp(c.temp, unit)}<span className="low"> low {fmtTemp(c.tempMin ?? c.temp, unit)}</span></p>
+          <p className="temp">{fmtTemp(c.temp, unit)}</p>
           <p className="cond">{capitalise(weatherWords(c.code))}</p>
-          <p className="feels num">{c.mm >= 0.1 ? `${c.mm.toFixed(1)} mm` : '0 mm'}{c.pop != null ? ` · ${c.pop}% chance` : ''} · UV {c.uv != null ? Math.round(c.uv) : '–'}</p>
+          <p className="feels num">Low {fmtTemp(c.tempMin ?? c.temp, unit)} · UV {c.uv != null ? Math.round(c.uv) : '–'}</p>
+          <p className="feels num">{c.mm >= 0.1 ? `${c.mm.toFixed(1)} mm` : '0 mm'}{c.pop != null ? ` · ${c.pop}% chance` : ''}</p>
         </div>
         <div className="dial-col">
           <div inert>
@@ -364,10 +376,18 @@ function HowAct({ place, tz }: { place: Place; tz: string }) {
 /** The instrument's printed degree scale: the ground the last screen stands on. */
 const TICKS = Array.from({ length: 72 }, (_, k) => k * 5);
 
-function CloseAct({ place, open }: { place: Place; open: string }) {
+function CloseAct({ place, open, f }: { place: Place; open: string; f?: Forecast }) {
+  const now = useMemo(() => Date.now(), []);
+  const h = f ? hourColumns(f, now, 1)[0] : undefined;
   return (
     <section id="open" className="close-act" aria-label="Open the sky">
       <div className="close-stage">
+        <div className="close-plate">
+        {/* The instrument's last appearance holds the sky over the place right now, not an empty ring. */}
+        <div className="close-sky">
+          <SkyWindow ms={now} lat={place.lat} lon={place.lon} low={h?.low ?? 0} mid={h?.mid ?? 0} high={h?.high ?? 0} mm={h?.mm ?? 0} print
+            label={`The sky over ${place.name} right now`} />
+        </div>
         <svg className="close-ring" viewBox="-500 -500 1000 1000" aria-hidden="true">
           <circle r="470" /><circle r="330" />
           {TICKS.map((d) => {
@@ -375,6 +395,7 @@ function CloseAct({ place, open }: { place: Place; open: string }) {
             return <line key={d} x1={r1 * Math.sin(a)} y1={-r1 * Math.cos(a)} x2={499 * Math.sin(a)} y2={-499 * Math.cos(a)} />;
           })}
         </svg>
+        </div>
         <div className="close-inner">
           <h2 className="close-q">Where's your sky?</h2>
           <form className="close-form" action="/" method="get">
@@ -385,7 +406,7 @@ function CloseAct({ place, open }: { place: Place; open: string }) {
           <p>Or <a href={open}>open the sky over {place.name}</a>.</p>
         </div>
         <footer className="foot small quiet">
-          Forecasts by <a href="https://open-meteo.com/">Open-Meteo</a> · <a href="https://github.com/SamGabriel-Here/celestial">Source on GitHub</a>
+          Made by <a href="https://samgabriel.vercel.app">Sam Gabriel</a> · Forecasts by <a href="https://open-meteo.com/">Open-Meteo</a> · <a href="https://github.com/SamGabriel-Here/celestial">Source on GitHub</a>
         </footer>
       </div>
     </section>

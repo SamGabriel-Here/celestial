@@ -14,6 +14,7 @@ export interface SkyOpts {
   mm: number;
   figures?: number; // 0..1: how much of each constellation line is drawn (the tour draws them on at nightfall)
   names?: number; // alpha of the bright stars' names, relative to the stars themselves
+  print?: boolean; // figures and names as print on the plate, over the cloud (the tour)
 }
 
 const rng = (seed: number) => () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
@@ -61,10 +62,12 @@ export function drawSky(canvas: HTMLCanvasElement, o: SkyOpts): void {
   for (const alt of [30, 60]) { g.beginPath(); g.arc(c, c, ((90 - alt) / 90) * R, 0, Math.PI * 2); g.stroke(); }
 
   const dark = Math.min(1, Math.max(0, (-sun.alt - 4) / 10));
-  if (dark > 0.03) {
+  // Constellation figures and the bright stars' names. By default they sit in the sky and cloud dims them;
+  // with `print` they are ink on the plate, drawn over the cloud at full strength (only the stars dim).
+  const figuresAndNames = (veil: number) => {
     g.strokeStyle = 'rgba(243,245,251,.32)';
     g.lineWidth = Math.max(0.8, size / 520);
-    g.globalAlpha = dark * (1 - cloud / 130);
+    g.globalAlpha = dark * veil;
     for (const [a, b] of FIGURES) {
       const pa = starPosition(BY_NAME.get(a)!, o.ms, o.lat, o.lon), pb = starPosition(BY_NAME.get(b)!, o.ms, o.lat, o.lon);
       if (pa.alt < 0 || pb.alt < 0) continue;
@@ -72,8 +75,20 @@ export function drawSky(canvas: HTMLCanvasElement, o: SkyOpts): void {
       if (t <= 0) continue;
       g.beginPath(); g.moveTo(x1, y1); g.lineTo(x1 + (x2 - x1) * t, y1 + (y2 - y1) * t); g.stroke();
     }
-    g.globalAlpha = 1;
     g.font = `400 ${Math.max(10, size / 46)}px Jost, sans-serif`;
+    g.fillStyle = '#fff';
+    for (const s of STARS) {
+      if (s[3] >= 0.9) continue;
+      const p = starPosition(s, o.ms, o.lat, o.lon);
+      if (p.alt < 0) continue;
+      const [x, y] = at(p.alt, p.az);
+      g.globalAlpha = dark * veil * (o.names ?? 0.55);
+      g.fillText(s[0], x + 6, y + 4);
+    }
+    g.globalAlpha = 1;
+  };
+  if (dark > 0.03) {
+    if (!o.print) figuresAndNames(1 - cloud / 130);
     for (const s of STARS) {
       const p = starPosition(s, o.ms, o.lat, o.lon);
       if (p.alt < 0) continue;
@@ -81,7 +96,6 @@ export function drawSky(canvas: HTMLCanvasElement, o: SkyOpts): void {
       g.globalAlpha = dark * (1 - cloud / 130);
       g.fillStyle = '#fff';
       g.beginPath(); g.arc(x, y, Math.max(0.7, 2.6 - s[3] * 0.6), 0, Math.PI * 2); g.fill();
-      if (s[3] < 0.9) { g.globalAlpha *= o.names ?? 0.55; g.fillText(s[0], x + 6, y + 4); }
     }
     g.globalAlpha = 1;
   }
@@ -131,6 +145,8 @@ export function drawSky(canvas: HTMLCanvasElement, o: SkyOpts): void {
     }
   }
 
+  if (o.print && dark > 0.03) figuresAndNames(1);
+
   // Compass on the window's edge.
   g.fillStyle = 'rgba(255,255,255,.78)';
   g.font = `500 ${Math.max(11, size / 30)}px Jost, sans-serif`;
@@ -169,7 +185,7 @@ export function SkyWindow({ label, ...o }: SkyOpts & { label: string }) {
     let live = true;
     document.fonts.ready.then(() => live && canvas.current && drawSky(canvas.current, opts.current));
     return () => { live = false; };
-  }, [o.ms, o.lat, o.lon, o.low, o.mid, o.high, o.mm, o.figures, o.names]);
+  }, [o.ms, o.lat, o.lon, o.low, o.mid, o.high, o.mm, o.figures, o.names, o.print]);
 
   return <canvas ref={canvas} role="img" aria-label={label} />;
 }

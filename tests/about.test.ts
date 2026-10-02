@@ -31,7 +31,7 @@ const dusk = (alt: (h: number) => number) => {
   let a = NaN, b = NaN;
   for (let h = 1 / 600; h <= 23; h += 1 / 600) {
     if (Number.isNaN(a) && alt(h - 1 / 600) > 6 && alt(h) <= 6) a = h; // the sun crossing 6° on its way down
-    if (!Number.isNaN(a) && alt(h) <= -12) { b = h; break; }
+    if (!Number.isNaN(a) && alt(h) <= -18) { b = h; break; }
   }
   return [a, b] as const;
 };
@@ -51,11 +51,11 @@ describe('skyTime', () => {
     const t = skyTime(day(15));
     for (let p = 0; p < 1; p += 0.01) expect(t(p + 0.01)).toBeGreaterThanOrEqual(t(p));
   });
-  it('gives dusk (sun 6° up to 12° down) about a quarter of the turn', () => {
+  it('gives dusk (sun 6° up to full night at 18° down) about a third of the turn', () => {
     for (const start of [9, 14]) {
       const alt = day(start), [a, b] = dusk(alt);
-      expect(share(skyTime(alt), a, b)).toBeGreaterThan(0.2);
-      expect(share(skyTime(alt), a, b)).toBeLessThan(0.36);
+      expect(share(skyTime(alt), a, b)).toBeGreaterThan(0.28); // 35% less what the eased edges spill
+      expect(share(skyTime(alt), a, b)).toBeLessThan(0.42);
     }
   });
   it('lands sunset mid-turn even when the visitor arrives after dark', () => {
@@ -88,3 +88,4 @@ describe('nightfall', () => {
     expect(nightfall(() => 40)).toBeNull();
   });
 });
+

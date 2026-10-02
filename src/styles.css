@@ -38,6 +38,7 @@ button { cursor: pointer; }
 .brand .mark-sun { transform-box: view-box; transform-origin: 15px 15.5px; transform: rotate(calc(var(--mark-turn, 0deg) + var(--mark-nudge, 0deg)));
   transition: transform 300ms cubic-bezier(.16, 1, .3, 1); }
 .brand:hover, .brand:focus-visible { --mark-nudge: 30deg; }
+.brand:focus-visible { outline-offset: 6px; border-radius: 999px; } /* round, like everything else */
 @media (prefers-reduced-motion: reduce) { .brand .mark-sun { transform: none; transition: none; } }
 .brand { display: flex; align-items: center; gap: 12px; font: 500 15px/1 var(--sans); letter-spacing: .32em; text-transform: uppercase; color: var(--print); text-decoration: none; }
 .tabs { display: flex; gap: 4px; justify-self: center; }

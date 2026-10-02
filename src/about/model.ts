@@ -20,10 +20,10 @@ export const HOLD = 0.04;
 const END = 0.92;
 const SPAN = 23; // hours ahead on the last segment of the rim
 
-// Dusk is the page's moment: from the sun 6° up to 12° below the horizon it gets this share of the turn
-// (about 27% of the whole act once the opening hold and the parked end are counted), centred this far
-// through the act. Everything before dusk and everything after share what is left.
-const DUSK_SHARE = 0.27 / (END - HOLD);
+// Dusk is the page's moment: from the sun 6° up to 18° below the horizon (full night) it gets this share of
+// the turn (about 35% of the whole act once the opening hold and the parked end are counted: more than one
+// screen of scroll, so a page-down or a flick lands inside it), centred this far through the act.
+const DUSK_SHARE = 0.35 / (END - HOLD);
 const DUSK_MID = (0.55 - HOLD) / (END - HOLD);
 const SMOOTH = 30; // minutes either side over which the pace eases between stretches
 
@@ -38,7 +38,7 @@ export function skyTime(altAt: (h: number) => number): (p: number) => number {
   const alt = Array.from({ length: N + 1 }, (_, i) => altAt(i / 60));
   let s0 = -1, s1 = N;
   for (let i = 1; i <= N; i++) {
-    const inDusk = alt[i]! <= 6 && alt[i]! >= -12 && alt[i]! < alt[i - 1]!;
+    const inDusk = alt[i]! <= 6 && alt[i]! >= -18 && alt[i]! < alt[i - 1]!;
     if (inDusk && s0 < 0) s0 = i;
     else if (!inDusk && s0 >= 0) { s1 = i; break; }
   }
@@ -80,3 +80,4 @@ export function nightfall(altAt: (h: number) => number, span = SPAN): number | n
   }
   return null;
 }
+
