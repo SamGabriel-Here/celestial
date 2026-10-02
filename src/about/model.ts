@@ -69,3 +69,14 @@ export function skyTime(altAt: (h: number) => number): (p: number) => number {
     return (lo + (step ? (target - cum[lo]!) / step : 0)) / 60;
   };
 }
+
+/** Hours from now until the sun next sinks past 6° below the horizon (civil nightfall), or null if not within a day. */
+export function nightfall(altAt: (h: number) => number, span = SPAN): number | null {
+  let prev = altAt(0);
+  for (let m = 2; m <= span * 60; m += 2) {
+    const a = altAt(m / 60);
+    if (prev > -6 && a <= -6) return m / 60;
+    prev = a;
+  }
+  return null;
+}

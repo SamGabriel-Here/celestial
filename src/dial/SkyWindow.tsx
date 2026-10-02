@@ -12,6 +12,8 @@ export interface SkyOpts {
   mid: number;
   high: number;
   mm: number;
+  figures?: number; // 0..1: how much of each constellation line is drawn (the tour draws them on at nightfall)
+  names?: number; // alpha of the bright stars' names, relative to the stars themselves
 }
 
 const rng = (seed: number) => () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
@@ -66,8 +68,9 @@ export function drawSky(canvas: HTMLCanvasElement, o: SkyOpts): void {
     for (const [a, b] of FIGURES) {
       const pa = starPosition(BY_NAME.get(a)!, o.ms, o.lat, o.lon), pb = starPosition(BY_NAME.get(b)!, o.ms, o.lat, o.lon);
       if (pa.alt < 0 || pb.alt < 0) continue;
-      const [x1, y1] = at(pa.alt, pa.az), [x2, y2] = at(pb.alt, pb.az);
-      g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+      const [x1, y1] = at(pa.alt, pa.az), [x2, y2] = at(pb.alt, pb.az), t = o.figures ?? 1;
+      if (t <= 0) continue;
+      g.beginPath(); g.moveTo(x1, y1); g.lineTo(x1 + (x2 - x1) * t, y1 + (y2 - y1) * t); g.stroke();
     }
     g.globalAlpha = 1;
     g.font = `400 ${Math.max(10, size / 46)}px Jost, sans-serif`;
@@ -78,7 +81,7 @@ export function drawSky(canvas: HTMLCanvasElement, o: SkyOpts): void {
       g.globalAlpha = dark * (1 - cloud / 130);
       g.fillStyle = '#fff';
       g.beginPath(); g.arc(x, y, Math.max(0.7, 2.6 - s[3] * 0.6), 0, Math.PI * 2); g.fill();
-      if (s[3] < 0.9) { g.globalAlpha *= 0.55; g.fillText(s[0], x + 6, y + 4); }
+      if (s[3] < 0.9) { g.globalAlpha *= o.names ?? 0.55; g.fillText(s[0], x + 6, y + 4); }
     }
     g.globalAlpha = 1;
   }
@@ -166,7 +169,7 @@ export function SkyWindow({ label, ...o }: SkyOpts & { label: string }) {
     let live = true;
     document.fonts.ready.then(() => live && canvas.current && drawSky(canvas.current, opts.current));
     return () => { live = false; };
-  }, [o.ms, o.lat, o.lon, o.low, o.mid, o.high, o.mm]);
+  }, [o.ms, o.lat, o.lon, o.low, o.mid, o.high, o.mm, o.figures, o.names]);
 
   return <canvas ref={canvas} role="img" aria-label={label} />;
 }

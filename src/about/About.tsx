@@ -4,16 +4,16 @@ import { Dial, type Segment } from '../dial/Dial';
 import { drawMoon, SkyWindow } from '../dial/SkyWindow';
 import { moonPhase, nextPhase, phaseName, sunPosition } from '../lib/astro';
 import { dayColumns, hourColumns } from '../lib/columns';
-import { fetchForecast, placeId } from '../lib/openmeteo';
+import { fetchForecast, geocode, placeId } from '../lib/openmeteo';
 import { loadSettings } from '../lib/places';
 import { skyColour } from '../lib/sky';
 import type { Forecast, Place } from '../lib/types';
-import { capitalise, clockLabel, fmtTemp, weatherWords, weekday, zonedIso, type Unit } from '../lib/units';
+import { capitalise, clockLabel, fmtTemp, offsetAt, weatherWords, weekday, zonedIso, type Unit } from '../lib/units';
 import { buildUrl } from '../lib/url';
-import { HOLD, skyTime, zoneCity } from './model';
+import { HOLD, nightfall, skyTime, zoneCity } from './model';
 import { ZONES } from './zones';
 
-type Why = 'last' | 'zone' | 'default';
+type Why = 'last' | 'zone' | 'default' | 'chosen';
 type Status = 'loading' | 'ready' | 'error';
 interface Pick { place: Place; why: Why; zone?: string } // zone: the place's clock, when known before its forecast
 const LONDON: Place = { id: placeId(51.51, -0.13), name: 'London', country: 'GB', lat: 51.51, lon: -0.13 };
@@ -32,16 +32,10 @@ function choosePlace(): Pick {
   return { place: LONDON, why: 'default', zone: 'Europe/London' };
 }
 
-/** Jump to the place field at the end of the tour and put the cursor in it. */
-const changePlace = () => {
-  document.getElementById('open')?.scrollIntoView({ block: 'end' });
-  document.getElementById('q')?.focus({ preventScroll: true });
-};
-
 const appUrl = (p: Place) => buildUrl({ q: p.name, at: { lat: p.lat, lon: p.lon }, view: 'now', t: 0 });
 
 export function About() {
-  const [pick] = useState(choosePlace);
+  const [pick, setPick] = useState(choosePlace);
   const [f, setF] = useState<Forecast>();
   const [status, setStatus] = useState<Status>('loading');
   const [attempt, setAttempt] = useState(0);
@@ -50,6 +44,7 @@ export function About() {
   // The sky is computed here and needs nothing; only the forecast on the rim waits for the network.
   useEffect(() => {
     let live = true;
+    setF(undefined); // a new place: its old forecast must not show over the new sky
     setStatus('loading');
     fetchForecast(pick.place)
       .then((x) => { if (live) { setF(x); setStatus('ready'); } })
@@ -59,22 +54,31 @@ export function About() {
 
   const { place } = pick;
   const open = appUrl(place);
+  const tz = f?.timezone ?? pick.zone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  // The header's tabs show which act the middle of the screen is in.
+  const [here, setHere] = useState('day');
+  useEffect(() => {
+    const io = new IntersectionObserver((es) => { for (const e of es) if (e.isIntersecting) setHere(e.target.id); }, { rootMargin: '-50% 0px -50% 0px' });
+    for (const id of ['day', 'days', 'how', 'open']) { const el = document.getElementById(id); if (el) io.observe(el); }
+    return () => io.disconnect();
+  }, [f]);
+  const cur = (id: string) => (here === id ? 'location' as const : undefined);
   return (
     <>
       <header className="top about-top">
         <a className="brand" href="/"><Mark /><span>Celestial</span></a>
         <nav className="tabs" aria-label="Sections">
-          <a href="#day">Next 24 hours</a>
+          <a href="#day" aria-current={cur('day')}>Next 24 hours</a>
           {/* Holds its place until there are sixteen days to jump to, so the header never reflows. */}
-          <a href="#days" className={f ? undefined : 'absent'} aria-hidden={!f} tabIndex={f ? undefined : -1}>16 days</a>
-          <a href="#how">How it works</a>
+          <a href="#days" className={f ? undefined : 'absent'} aria-hidden={!f} tabIndex={f ? undefined : -1} aria-current={cur('days')}>16 days</a>
+          <a href="#how" aria-current={cur('how')}>How it works</a>
         </nav>
         <a className="open-link" href={open}>Open the sky</a>
       </header>
       <main>
-        <DayAct f={f} pick={pick} status={status} unit={unit} retry={() => setAttempt((n) => n + 1)} />
+        <DayAct f={f} pick={pick} status={status} unit={unit} retry={() => setAttempt((n) => n + 1)} choose={(p) => setPick({ place: p, why: 'chosen' })} />
         {f && <DaysAct f={f} place={place} unit={unit} />}
-        <HowAct place={place} />
+        <HowAct place={place} tz={tz} />
         <CloseAct place={place} open={open} />
       </main>
     </>
@@ -105,12 +109,14 @@ function useStep(ref: RefObject<HTMLElement | null>, time: (p: number) => number
   return step;
 }
 
-function DayAct({ f, pick, status, unit, retry }: { f?: Forecast; pick: Pick; status: Status; unit: Unit; retry(): void }) {
+function DayAct({ f, pick, status, unit, retry, choose }: { f?: Forecast; pick: Pick; status: Status; unit: Unit; retry(): void; choose(p: Place): void }) {
   const { place, why } = pick;
   const ref = useRef<HTMLElement>(null);
   const now = useMemo(() => Date.now(), []);
   // Scroll moves through the sky's own time: dusk is slowed to fill the middle of the act.
-  const time = useMemo(() => skyTime((h) => sunPosition(now + h * HOUR, place.lat, place.lon).alt), [now, place]);
+  const altAt = useCallback((h: number) => sunPosition(now + h * HOUR, place.lat, place.lon).alt, [now, place]);
+  const time = useMemo(() => skyTime(altAt), [altAt]);
+  const dusk = useMemo(() => { const h = nightfall(altAt); return h === null ? null : now + h * HOUR; }, [altAt, now]);
   const step = useStep(ref, time);
   // The header's mark is this wheel in miniature: its sun turns 15° for every hour the scroll moves on.
   useEffect(() => { document.documentElement.style.setProperty('--mark-turn', `${(step * STEP / HOUR) * 15}deg`); }, [step]);
@@ -118,7 +124,10 @@ function DayAct({ f, pick, status, unit, retry }: { f?: Forecast; pick: Pick; st
   const cols = useMemo(() => (f ? hourColumns(f, now, 24) : []), [f, now]);
   // Before the forecast (or without it) the rim still turns: hours and the sky's own day and night, no values.
   const starts = useMemo(() => (cols.length ? cols.map((x) => x.startMs)
-    : Array.from({ length: 24 }, (_, k) => Math.floor(now / HOUR) * HOUR + k * HOUR)), [cols, now]);
+    : Array.from({ length: 24 }, (_, k) => {
+      const off = tz ? offsetAt(now, tz) * 1000 : 0; // the place's own hours, so half-hour zones read true
+      return Math.floor((now + off) / HOUR) * HOUR - off + k * HOUR;
+    })), [cols, now, tz]);
   const segments = useMemo<Segment[]>(() => {
     if (f && cols.length) {
       const maxMm = Math.max(1, ...cols.map((x) => x.mm));
@@ -144,11 +153,21 @@ function DayAct({ f, pick, status, unit, retry }: { f?: Forecast; pick: Pick; st
   const mins = Math.round((ms - now) / 60e3);
   const ahead = mins < 1 ? 'now' : mins < 60 ? `in ${mins} min` : `in ${Math.round(mins / 60)} h`;
   const at = iso ? clockLabel(iso) : ahead;
+  const nightAt = dusk && tz ? clockLabel(zonedIso(dusk, tz)) : '';
   const hint = step === 0
-    ? `This is Celestial, running. It is the real sky over ${place.name} at this minute: the sun, the moon and the 45 brightest stars, computed in your browser${f ? ', with cloud at three heights from the live forecast' : ''}.`
+    ? `This is Celestial, running: the sun, the moon and the 45 brightest stars, computed in your browser${f ? ', with cloud at three heights from the live forecast' : ''}.${sun.alt < -6 && nightAt ? ` Keep turning: the next nightfall is at ${nightAt}.` : ''}`
     : sun.alt > 0 ? `The sun is ${Math.round(sun.alt)}° up.${f ? ` Every hour on the rim is the live forecast for ${place.name}.` : ''}`
     : sun.alt > -6 ? 'Twilight: the sun has just gone below the horizon.'
     : `Night. These are the stars above ${place.name}${iso ? ` at ${at}` : ''}, where they really are${cloud > 60 ? `, dimmed by ${cloud}% cloud` : ''}.`;
+  // Nightfall is the page's moment: in the evening before it the figures are held back, then they draw on
+  // over the first forty minutes of night while the stars' names come up, and a caption marks it.
+  const sinceDusk = dusk ? ms - dusk : -Infinity;
+  const evening = dusk !== null && sinceDusk < 0 && sinceDusk > -3 * HOUR;
+  const figures = evening ? 0 : sinceDusk >= 0 && sinceDusk < 40 * 60e3 ? sinceDusk / (40 * 60e3) : 1;
+  const names = sinceDusk >= 0 && sinceDusk < 3 * HOUR ? 0.55 + 0.4 * Math.min(1, sinceDusk / (40 * 60e3)) : 0.55;
+  const atNightfall = sinceDusk >= 0 && sinceDusk < 3 * HOUR;
+  const skyLabel = `The sky over ${place.name} ${iso ? `at ${at}` : ahead}${c ? `: ${weatherWords(c.code)}, ${cloud}% cloud` : ''}`;
+  const [editing, setEditing] = useState(false);
 
   return (
     <section id="day" ref={ref} className="day-act" aria-label="The next 24 hours">
@@ -157,7 +176,7 @@ function DayAct({ f, pick, status, unit, retry }: { f?: Forecast; pick: Pick; st
           <h1>{place.name}{place.country ? <span>, {place.country}</span> : null}</h1>
           <p className="when num">{iso ? `${weekday(iso)} · ${clockLabel(iso)} local · ${ahead}` : capitalise(ahead)}</p>
           {/* The reading keeps its shape while the forecast loads, so nothing below it jumps when it arrives. */}
-          <p className={`temp${c ? '' : ' pending'}`}>{f && c ? fmtTemp(i === 0 ? f.current.temp : c.temp, unit) : '–°'}</p>
+          {(c || status !== 'error') && <p className={`temp${c ? '' : ' pending'}`}>{f && c ? fmtTemp(i === 0 ? f.current.temp : c.temp, unit) : '–°'}</p>}
           {f && c ? (
             <>
               <p className="cond">{capitalise(weatherWords(c.code))}</p>
@@ -174,21 +193,27 @@ function DayAct({ f, pick, status, unit, retry }: { f?: Forecast; pick: Pick; st
               <p className="feels" aria-hidden="true">&nbsp;</p>
             </>
           )}
-          <p className="guess small quiet">
-            {why === 'last' ? 'The last place you opened' : why === 'zone' ? 'Guessed from your time zone' : 'London, until you choose a place'}
-            {' · '}<a href="#open" onClick={(e) => { e.preventDefault(); changePlace(); }}>Change</a>
-          </p>
+          {editing ? <ChangePlace choose={(p) => { setEditing(false); choose(p); }} cancel={() => setEditing(false)} /> : (
+            <p className="guess small quiet">
+              {why === 'last' ? 'The last place you opened' : why === 'zone' ? 'Guessed from your time zone' : why === 'chosen' ? 'Your choice' : 'London, until you choose a place'}
+              {' · '}<button type="button" className="link" onClick={() => setEditing(true)}>Change</button>
+            </p>
+          )}
         </div>
         <div className="dial-col">
           <div inert>
           <Dial segments={segments} index={i} onIndex={() => {}} turnMs={420} label="The next 24 hours"
             valueText={c ? `${at}, ${weatherWords(c.code)}` : at} glow={skyColour(sun.alt, cloud).horizon}>
             <SkyWindow ms={ms} lat={place.lat} lon={place.lon} low={c?.low ?? 0} mid={c?.mid ?? 0} high={c?.high ?? 0} mm={c?.mm ?? 0}
-              label={`The sky over ${place.name} ${iso ? `at ${at}` : ahead}${c ? `: ${weatherWords(c.code)}, ${cloud}% cloud` : ''}`} />
+              figures={figures} names={names} label={skyLabel} />
           </Dial>
           </div>
-          {/* The one instruction, under the wheel it is about; it steps back once the wheel has turned. */}
-          <p className={`dial-hint${step ? ' done' : ''}`}>Scroll to turn the wheel through the next 24 hours</p>
+          <p className="sr">{skyLabel}</p>
+          {/* Under the wheel: the claim and the one instruction at rest, then the nightfall caption. */}
+          <p className={`dial-hint ${step === 0 ? 'claim' : atNightfall ? 'nightfall' : 'done'}`}>
+            {step === 0 ? <>The real sky over {place.name}, right now. <span>Scroll to turn it through tomorrow.</span></>
+              : `Nightfall over ${place.name}${nightAt ? ` · ${nightAt}` : ''}${cloud > 60 ? ` · the stars are behind ${cloud}% cloud` : ''}`}
+          </p>
         </div>
         <aside className="details">
           <section>
@@ -203,6 +228,33 @@ function DayAct({ f, pick, status, unit, retry }: { f?: Forecast; pick: Pick; st
         </aside>
       </div>
     </section>
+  );
+}
+
+/** Pick another place in place: the whole tour re-runs over it. */
+function ChangePlace({ choose, cancel }: { choose(p: Place): void; cancel(): void }) {
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+  return (
+    <form className="change-form" onSubmit={async (e) => {
+      e.preventDefault();
+      const q = String(new FormData(e.currentTarget).get('where') ?? '').trim();
+      if (!q) return;
+      setBusy(true); setMsg('');
+      try {
+        const [p] = await geocode(q);
+        if (p) choose(p); else setMsg(`No place called ${q}.`);
+      } catch { setMsg("The place search didn't load. Try again."); }
+      setBusy(false);
+    }} onKeyDown={(e) => { if (e.key === 'Escape') cancel(); }}>
+      <label className="sr" htmlFor="where">Another place</label>
+      <div className="change-row">
+        <input id="where" name="where" autoFocus required placeholder="Any city or town" autoComplete="off" />
+        <button type="submit" disabled={busy}>{busy ? 'Finding…' : 'Go'}</button>
+        <button type="button" className="link" onClick={cancel}>Cancel</button>
+      </div>
+      {msg && <p className="small" role="status">{msg}</p>}
+    </form>
   );
 }
 
@@ -234,9 +286,9 @@ function DaysAct({ f, place, unit }: { f: Forecast; place: Place; unit: Unit }) 
         <div className="reading">
           <h2 className="day-name">{name(c.iso, i)}</h2>
           <p className="when num">Noon · {i ? `in ${i} ${i === 1 ? 'day' : 'days'}` : 'today'}</p>
-          <p className="temp">{fmtTemp(c.temp, unit)}<span className="low"> {fmtTemp(c.tempMin ?? c.temp, unit)}</span></p>
+          <p className="temp">{fmtTemp(c.temp, unit)}<span className="low"> low {fmtTemp(c.tempMin ?? c.temp, unit)}</span></p>
           <p className="cond">{capitalise(weatherWords(c.code))}</p>
-          <p className="feels num">{c.mm >= 0.1 ? `${c.mm.toFixed(1)} mm` : 'Dry'}{c.pop != null ? ` · ${c.pop}% rain` : ''} · UV {c.uv != null ? Math.round(c.uv) : '–'}</p>
+          <p className="feels num">{c.mm >= 0.1 ? `${c.mm.toFixed(1)} mm` : '0 mm'}{c.pop != null ? ` · ${c.pop}% chance` : ''} · UV {c.uv != null ? Math.round(c.uv) : '–'}</p>
         </div>
         <div className="dial-col">
           <div inert>
@@ -257,7 +309,7 @@ function DaysAct({ f, place, unit }: { f: Forecast; place: Place; unit: Unit }) 
                 <li key={d.iso} className={k === i ? 'sel' : undefined}>
                   <span>{name(d.iso, k)}</span>
                   <span className="track" aria-hidden="true"><i style={{ left: at(d.tempMin ?? d.temp), right: `calc(100% - ${at(d.temp)})` }} /></span>
-                  <span className="num">{fmtTemp(d.tempMin ?? d.temp, unit)} {fmtTemp(d.temp, unit)}</span>
+                  <span className="num">{fmtTemp(d.tempMin ?? d.temp, unit).replace('°', '')}–{fmtTemp(d.temp, unit)}</span>
                 </li>
               ))}
             </ol>
@@ -280,7 +332,7 @@ function MoonFigure({ south }: { south: boolean }) {
   return <canvas ref={ref} aria-hidden="true" />;
 }
 
-function HowAct({ place }: { place: Place }) {
+function HowAct({ place, tz }: { place: Place; tz: string }) {
   const ref = useRef<HTMLElement>(null);
   const [seen, setSeen] = useState(false);
   useEffect(() => {
@@ -290,7 +342,7 @@ function HowAct({ place }: { place: Place }) {
   }, []);
   const now = useMemo(() => Date.now(), []);
   const ph = moonPhase(now);
-  const fullIso = zonedIso(nextPhase(now, 0.5), Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const fullIso = zonedIso(nextPhase(now, 0.5), tz); // the place's date, like every time on the page
   return (
     <section id="how" ref={ref} className={`how-act${seen ? ' in' : ''}`} aria-label="How it works">
       <div className="how-wrap">

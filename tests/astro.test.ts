@@ -12,6 +12,13 @@ describe('astro', () => {
     expect(moonPhase(Date.UTC(2025, 0, 29, 12, 36)).lit).toBeLessThan(0.01);
     expect(phaseName(0.5)).toBe('Full moon');
     expect(phaseName(0)).toBe('New moon');
+    // Quarters and the full and new moon are moments, named only within about a day of them.
+    expect(phaseName(0.75)).toBe('Last quarter');
+    expect(phaseName(0.68)).toBe('Waning gibbous');
+    expect(phaseName(0.7)).toBe('Waning gibbous'); // 65% lit is not a quarter moon
+    expect(phaseName(0.83)).toBe('Waning crescent');
+    expect(phaseName(0.27)).toBe('First quarter');
+    expect(phaseName(0.97)).toBe('New moon');
   });
   it('holds Polaris at the observer’s latitude', () => {
     const polaris = STARS.find((s) => s[0] === 'Polaris')!;

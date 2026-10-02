@@ -70,9 +70,16 @@ export function moonPhase(ms: number): { lit: number; phase: number } {
   return { lit: (1 + Math.cos(inc)) / 2, phase };
 }
 
-const PHASES = ['New moon', 'Waxing crescent', 'First quarter', 'Waxing gibbous',
-  'Full moon', 'Waning gibbous', 'Last quarter', 'Waning crescent'];
-export const phaseName = (phase: number): string => PHASES[Math.round(phase * 8) % 8] as string;
+// New, full and the quarters are moments, named only within about a day of them; between them the moon
+// is a crescent or gibbous, so a name never contradicts how much of it is lit.
+const MOMENTS: [number, string][] = [[0, 'New moon'], [0.25, 'First quarter'], [0.5, 'Full moon'], [0.75, 'Last quarter'], [1, 'New moon']];
+const DAY_OF_PHASE = 1 / 29.53;
+export function phaseName(phase: number): string {
+  const p = ((phase % 1) + 1) % 1;
+  const moment = MOMENTS.find(([at]) => Math.abs(p - at) <= DAY_OF_PHASE);
+  if (moment) return moment[1];
+  return p < 0.25 ? 'Waxing crescent' : p < 0.5 ? 'Waxing gibbous' : p < 0.75 ? 'Waning gibbous' : 'Waning crescent';
+}
 
 /** Rise/set within the 24 h starting at `ms`; `polar` when the sun never crosses the horizon. */
 export function sunEvents(ms: number, lat: number, lon: number): { rise: number | null; set: number | null; polar: 'day' | 'night' | null } {

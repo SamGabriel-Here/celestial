@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HOLD, skyTime, zoneCity } from '../src/about/model';
+import { HOLD, nightfall, skyTime, zoneCity } from '../src/about/model';
 import { ZONES } from '../src/about/zones';
 
 describe('zoneCity', () => {
@@ -71,5 +71,20 @@ describe('skyTime', () => {
     expect(t(1)).toBeCloseTo(23, 5);
     expect(t(0.5)).toBeGreaterThan(9);
     expect(t(0.5)).toBeLessThan(14);
+  });
+});
+
+describe('nightfall', () => {
+  it('finds when the sun next sinks past 6° below the horizon', () => {
+    const h = nightfall(day(14)); // 2 pm local in the synthetic day
+    expect(h).toBeGreaterThan(4);
+    expect(h).toBeLessThan(7);
+    expect(day(14)(h!)).toBeCloseTo(-6, 0);
+  });
+  it('skips the night already under way and finds the next one', () => {
+    expect(nightfall(day(22))!).toBeGreaterThan(18);
+  });
+  it('has none without a sunset in the window', () => {
+    expect(nightfall(() => 40)).toBeNull();
   });
 });
