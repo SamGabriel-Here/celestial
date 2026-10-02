@@ -54,7 +54,7 @@ body.about { overflow-x: clip; }
 /* ---------- 3 · where it comes from ---------- */
 .how-act { padding-block: clamp(3rem, 6vw, 6rem) clamp(4rem, 9vw, 9rem); }
 .how-wrap { max-width: 72rem; margin-inline: auto; padding-inline: var(--pad); display: grid; align-items: center; justify-content: center;
-  grid-template-columns: minmax(180px, 20rem) minmax(0, 34rem); gap: clamp(32px, 7vw, 112px); }
+  grid-template-columns: minmax(160px, 15rem) minmax(0, 34rem); gap: clamp(32px, 7vw, 112px); }
 .moon canvas { width: 100%; aspect-ratio: 1; filter: drop-shadow(0 14px 28px rgb(5 12 46 / .55)); }
 .moon figcaption { margin-top: 18px; color: var(--print-2); font-size: 15px; max-width: 30ch; }
 .how-text { display: grid; gap: 16px; font-size: 18px; line-height: 1.55; }
@@ -90,7 +90,8 @@ body.about { overflow-x: clip; }
 /* ---------- phone: the place and the reading above the wheel, the status line below ---------- */
 @media (max-width: 980px) {
   :root { --hdr: 56px; }
-  .about { --dial: min(calc(100vw - 32px), calc(100svh - var(--hdr) - 300px)); }
+  /* The wheel takes what the screen has left after the reading, the instruction line and the hint. */
+  .about { --dial: min(calc(100vw - 32px), calc(100svh - 390px)); }
   .about-top { grid-template-columns: 1fr auto; padding-inline: 16px; }
   .about-top .tabs { display: none; }
   .day-stage { grid-template-columns: 1fr; align-content: center; align-items: start; justify-items: center; gap: 12px;
@@ -105,7 +106,7 @@ body.about { overflow-x: clip; }
   .day-stage .details { width: 100%; }
   .day-stage .details h2, .day-stage .details .at, .ranges { display: none; }
   .about .day-stage .reading h2.day-name { grid-column: 1; font-size: 22px; }
-  .hint { min-height: 9em; max-width: none; font-size: 15px; margin: 0; } /* reserved: the hint changes as the wheel turns */
+  .hint { min-height: 7.5em; max-width: none; font-size: 15px; margin: 0; } /* reserved: the hint changes as the wheel turns */
   .how-wrap { grid-template-columns: 1fr; justify-items: start; }
   .moon { width: min(60vw, 16rem); }
   .close-ring { width: 150vw; right: -75vw; }
