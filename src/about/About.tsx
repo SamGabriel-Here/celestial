@@ -10,7 +10,7 @@ import { skyColour } from '../lib/sky';
 import type { Forecast, Place } from '../lib/types';
 import { capitalise, clockLabel, fmtTemp, weatherWords, weekday, zonedIso, type Unit } from '../lib/units';
 import { buildUrl } from '../lib/url';
-import { skyTime, zoneCity } from './model';
+import { HOLD, skyTime, zoneCity } from './model';
 import { ZONES } from './zones';
 
 type Why = 'last' | 'zone' | 'default';
@@ -194,37 +194,60 @@ function DayAct({ f, pick, status, unit, open, retry }: { f?: Forecast; pick: Pi
   );
 }
 
+/** The app's sixteen-day wheel, turned by the scroll a day at a time: noon in the window, the fortnight beside it. */
 function DaysAct({ f, place, unit }: { f: Forecast; place: Place; unit: Unit }) {
   const cols = useMemo(() => dayColumns(f), [f]);
   const ref = useRef<HTMLElement>(null);
-  const rail = useRef<HTMLDivElement>(null);
-  // Vertical scroll travels the rail sideways, exactly its overflow. With reduced motion the stage scrolls natively instead.
+  const [i, setI] = useState(0);
   useProgress(ref, useCallback((p: number) => {
-    const el = rail.current!;
-    el.style.transform = matchMedia('(prefers-reduced-motion: reduce)').matches ? '' : `translateX(${-p * Math.max(0, el.scrollWidth - innerWidth)}px)`;
-  }, []));
+    setI(Math.min(cols.length - 1, Math.max(0, Math.floor(((p - HOLD) / (0.92 - HOLD)) * cols.length))));
+  }, [cols.length]));
+  const segments = useMemo<Segment[]>(() => {
+    const maxMm = Math.max(1, ...cols.map((x) => x.mm));
+    return cols.map((x, k) => ({
+      key: x.iso, top: k ? `${x.label} ${Number(x.iso.slice(8, 10))}` : 'Today', bottom: fmtTemp(x.temp, unit), mark: k === 0,
+      ...(x.mm >= 0.1 ? { spoke: x.mm / maxMm, spokeAlpha: (x.pop ?? 50) / 100 } : {}),
+    }));
+  }, [cols, unit]);
+  if (!cols.length) return null;
+  const c = cols[i]!;
+  const name = (iso: string, k: number) => (k ? `${weekday(iso)} ${Number(iso.slice(8, 10))}` : 'Today');
+  const cloud = Math.max(c.low, c.mid, c.high);
+  // One temperature scale for the whole fortnight, so the bars compare.
+  const lo = Math.min(...cols.map((d) => d.tempMin ?? d.temp)), hi = Math.max(...cols.map((d) => d.temp));
+  const at = (t: number) => `${((t - lo) / Math.max(1, hi - lo)) * 100}%`;
   return (
     <section id="days" ref={ref} className="days-act" aria-label="Sixteen days">
-      <div className="days-stage">
-        <div className="days-rail" ref={rail}>
-          <div className="days-lead">
-            <h2>Sixteen days</h2>
-            <p>Noon over {place.name} on each of the next sixteen days, with the range, the rain it brings and the UV at its height.</p>
-          </div>
-          {cols.map((d, k) => (
-            <article key={d.iso} className="day">
-              <div className="day-sky">
-                <SkyWindow ms={d.startMs} lat={place.lat} lon={place.lon} low={d.low} mid={d.mid} high={d.high} mm={d.mm / 24}
-                  label={`Noon on ${weekday(d.iso)} ${Number(d.iso.slice(8, 10))}: ${weatherWords(d.code)}`} />
-              </div>
-              <h3>{k ? `${weekday(d.iso)} ${Number(d.iso.slice(8, 10))}` : 'Today'}</h3>
-              <p className="num">{fmtTemp(d.temp, unit)} <span className="quiet">{fmtTemp(d.tempMin ?? d.temp, unit)}</span></p>
-              <p>{capitalise(weatherWords(d.code))}</p>
-              <p className="quiet num">{d.mm >= 0.1 ? `${d.mm.toFixed(1)} mm` : 'Dry'} · UV {d.uv != null ? Math.round(d.uv) : '—'}</p>
-            </article>
-          ))}
-          <p className="days-end">In the app these sixteen days sit on one wheel. Turn it to any of them.</p>
+      <div className="day-stage">
+        <div className="reading">
+          <h2 className="day-name">{name(c.iso, i)}</h2>
+          <p className="when num">Noon · {i ? `in ${i} ${i === 1 ? 'day' : 'days'}` : 'today'}</p>
+          <p className="temp">{fmtTemp(c.temp, unit)}<span className="low"> {fmtTemp(c.tempMin ?? c.temp, unit)}</span></p>
+          <p className="cond">{capitalise(weatherWords(c.code))}</p>
+          <p className="feels num">{c.mm >= 0.1 ? `${c.mm.toFixed(1)} mm` : 'Dry'}{c.pop != null ? ` · ${c.pop}% rain` : ''} · UV {c.uv != null ? Math.round(c.uv) : '–'}</p>
         </div>
+        <div className="dial-col" inert>
+          <Dial segments={segments} index={i} onIndex={() => {}} turnMs={420} label="The next sixteen days"
+            valueText={`${name(c.iso, i)}: ${weatherWords(c.code)}`} glow={skyColour(c.sunAlt, cloud).horizon}>
+            <SkyWindow ms={c.startMs} lat={place.lat} lon={place.lon} low={c.low} mid={c.mid} high={c.high} mm={c.mm / 24}
+              label={`Noon over ${place.name} on ${name(c.iso, i)}: ${weatherWords(c.code)}`} />
+          </Dial>
+        </div>
+        <aside className="details">
+          <section>
+            <h2>Sixteen days</h2>
+            <p className="hint">Noon over {place.name} on each of the next sixteen days. Scroll to turn the wheel a day at a time.</p>
+            <ol className="ranges" aria-label="Low and high for each day, on one scale">
+              {cols.map((d, k) => (
+                <li key={d.iso} className={k === i ? 'sel' : undefined}>
+                  <span>{name(d.iso, k)}</span>
+                  <span className="track" aria-hidden="true"><i style={{ left: at(d.tempMin ?? d.temp), right: `calc(100% - ${at(d.temp)})` }} /></span>
+                  <span className="num">{fmtTemp(d.tempMin ?? d.temp, unit)} {fmtTemp(d.temp, unit)}</span>
+                </li>
+              ))}
+            </ol>
+          </section>
+        </aside>
       </div>
     </section>
   );

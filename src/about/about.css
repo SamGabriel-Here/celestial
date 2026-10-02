@@ -9,9 +9,9 @@ body.about { overflow-x: clip; }
 
 /* Pinned acts: a tall section whose stage holds the screen while the scroll passes through it. */
 .day-act { height: 420svh; }
-.days-act { height: 300svh; }
+.days-act { height: 200svh; }
 .close-act { height: 130svh; }
-.day-stage, .days-stage, .close-stage { position: sticky; top: 0; height: 100svh; overflow: clip; }
+.day-stage, .close-stage { position: sticky; top: 0; height: 100svh; overflow: clip; }
 .about { --dial: min(calc(100svh - var(--hdr) - 72px), 44vw); }
 .about a { color: inherit; text-underline-offset: 3px; }
 
@@ -37,19 +37,17 @@ body.about { overflow-x: clip; }
 .forecast-state { margin-top: 4px; display: grid; gap: 12px; justify-items: start; max-width: 30ch; font-size: 16px; line-height: 1.45; }
 .hint { font-size: 16px; line-height: 1.5; max-width: 34ch; min-height: 9em; margin-bottom: 14px; }
 
-/* ---------- 2 · sixteen days ---------- */
-.days-stage { display: flex; align-items: center; padding-top: var(--hdr); }
-.days-rail { display: flex; will-change: transform; gap: clamp(20px, 2.4vw, 40px); align-items: start; padding-inline: var(--pad); width: max-content; }
-.days-lead, .days-end { align-self: center; width: min(21rem, 78vw); }
-.days-lead p, .days-end { font-size: 18px; line-height: 1.45; }
-.days-end { width: min(15rem, 70vw); color: var(--print-2); padding-right: var(--pad); }
-.about h2:not(.moment) { font: 500 12px/1 var(--sans); letter-spacing: .28em; text-transform: uppercase; color: var(--print-2); margin-bottom: 14px; }
-.day { width: clamp(9.5rem, 12.5vw, 12rem); display: grid; gap: 3px; font-size: 15px; }
-.day-sky { aspect-ratio: 1; border-radius: 50%; overflow: hidden; margin-bottom: 12px; background: var(--card-deep);
-  box-shadow: 0 0 0 1.5px var(--print), 0 10px 24px -8px rgb(5 12 46 / .6); }
-.day-sky canvas { display: block; width: 100%; height: 100%; }
-.day h3 { font: 500 15px/1.3 var(--sans); }
-.day .num { font-size: 20px; }
+/* ---------- 2 · sixteen days: the same instrument, a day per step ---------- */
+.about h2:not(.moment):not(.day-name) { font: 500 12px/1 var(--sans); letter-spacing: .28em; text-transform: uppercase; color: var(--print-2); margin-bottom: 14px; }
+.about .reading h2.day-name { font: 400 clamp(22px, 2vw, 30px)/1.1 var(--sans); letter-spacing: .01em; text-transform: none; color: var(--print); margin: 0; }
+.temp .low { font-size: .38em; letter-spacing: -.01em; color: var(--print-2); vertical-align: .9em; }
+.ranges { list-style: none; padding: 0; margin-top: 18px; display: grid; gap: 1px; font-size: 13px; }
+.ranges li { display: grid; grid-template-columns: 4.5em 1fr 4.5em; align-items: center; gap: 10px; padding: 2px 0; color: var(--print-2); }
+.ranges .track { position: relative; height: 4px; border-radius: 2px; background: var(--line-soft); }
+.ranges .track i { position: absolute; top: 0; bottom: 0; border-radius: 2px; background: var(--print-2); }
+.ranges .num { text-align: right; font-variant-numeric: tabular-nums; }
+.ranges li.sel { color: var(--print); }
+.ranges li.sel .track i { background: var(--sun); }
 
 /* ---------- 3 · where it comes from ---------- */
 .how-act { padding-block: clamp(3rem, 6vw, 6rem) clamp(4rem, 9vw, 9rem); }
@@ -103,7 +101,8 @@ body.about { overflow-x: clip; }
   .day-stage .guess { display: none; }
   .day-stage .forecast-state { grid-column: 1 / -1; margin-top: 6px; max-width: none; font-size: 15px; }
   .day-stage .details { width: 100%; }
-  .day-stage .details h2, .day-stage .details .at { display: none; }
+  .day-stage .details h2, .day-stage .details .at, .ranges { display: none; }
+  .about .day-stage .reading h2.day-name { grid-column: 1; font-size: 22px; }
   .hint { min-height: 9em; max-width: none; font-size: 15px; margin: 0; } /* reserved: the hint changes as the wheel turns */
   .how-wrap { grid-template-columns: 1fr; justify-items: start; }
   .moon { width: min(60vw, 16rem); }
@@ -113,9 +112,6 @@ body.about { overflow-x: clip; }
 }
 @media (prefers-reduced-motion: reduce) {
   .open-link, .close-form button { transition: none; }
-  /* The rail is navigation, not decoration: without motion it becomes a native sideways scroll. */
-  .days-act { height: auto; }
-  .days-stage { position: static; height: auto; overflow-x: auto; padding-block: calc(var(--hdr) + 6vh) 6vh; }
   .moon { clip-path: none; transition: none; }
   .how-text > * { transform: none; transition: opacity 220ms ease-out; }
 }
