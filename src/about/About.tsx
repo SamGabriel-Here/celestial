@@ -112,6 +112,8 @@ function DayAct({ f, pick, status, unit, retry }: { f?: Forecast; pick: Pick; st
   // Scroll moves through the sky's own time: dusk is slowed to fill the middle of the act.
   const time = useMemo(() => skyTime((h) => sunPosition(now + h * HOUR, place.lat, place.lon).alt), [now, place]);
   const step = useStep(ref, time);
+  // The header's mark is this wheel in miniature: its sun turns 15° for every hour the scroll moves on.
+  useEffect(() => { document.documentElement.style.setProperty('--mark-turn', `${(step * STEP / HOUR) * 15}deg`); }, [step]);
   const tz = f?.timezone ?? pick.zone; // unknown for a last-opened place until its forecast says
   const cols = useMemo(() => (f ? hourColumns(f, now, 24) : []), [f, now]);
   // Before the forecast (or without it) the rim still turns: hours and the sky's own day and night, no values.
