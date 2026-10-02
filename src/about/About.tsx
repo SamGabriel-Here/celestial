@@ -58,7 +58,10 @@ export function About() {
       <header className="top about-top">
         <a className="brand" href="/"><Mark /><span>Celestial</span></a>
         <nav className="tabs" aria-label="Sections">
-          <a href="#day">Next 24 hours</a>{f && <a href="#days">16 days</a>}<a href="#how">How it works</a>
+          <a href="#day">Next 24 hours</a>
+          {/* Holds its place until there are sixteen days to jump to, so the header never reflows. */}
+          <a href="#days" className={f ? undefined : 'absent'} aria-hidden={!f} tabIndex={f ? undefined : -1}>16 days</a>
+          <a href="#how">How it works</a>
         </nav>
         <a className="open-link" href={open}>Open the sky</a>
       </header>
@@ -145,9 +148,10 @@ function DayAct({ f, pick, status, unit, open, retry }: { f?: Forecast; pick: Pi
         <div className="reading">
           <h1>{place.name}{place.country ? <span>, {place.country}</span> : null}</h1>
           <p className="when num">{iso ? `${weekday(iso)} · ${clockLabel(iso)} local · ${ahead}` : capitalise(ahead)}</p>
+          {/* The reading keeps its shape while the forecast loads, so nothing below it jumps when it arrives. */}
+          <p className={`temp${c ? '' : ' pending'}`}>{f && c ? fmtTemp(i === 0 ? f.current.temp : c.temp, unit) : '–°'}</p>
           {f && c ? (
             <>
-              <p className="temp">{fmtTemp(i === 0 ? f.current.temp : c.temp, unit)}</p>
               <p className="cond">{capitalise(weatherWords(c.code))}</p>
               <p className="feels">{c.pop ?? 0}% chance of rain{c.mm >= 0.1 ? `, ${c.mm.toFixed(1)} mm` : ''}</p>
             </>
@@ -157,7 +161,10 @@ function DayAct({ f, pick, status, unit, open, retry }: { f?: Forecast; pick: Pi
               <button type="button" className="chip" onClick={retry}>Try again</button>
             </div>
           ) : (
-            <p className="forecast-state quiet" role="status">Loading the forecast…</p>
+            <>
+              <p className="cond quiet" role="status">Loading the forecast…</p>
+              <p className="feels" aria-hidden="true">&nbsp;</p>
+            </>
           )}
           <p className="guess small quiet">
             {why === 'last' ? 'The last place you opened.' : why === 'zone' ? 'Guessed from your time zone.' : 'London, until you choose a place.'}{' '}
@@ -176,7 +183,7 @@ function DayAct({ f, pick, status, unit, open, retry }: { f?: Forecast; pick: Pi
             <h2>{step === 0 ? 'What you are looking at' : 'This hour'}</h2>
             <p className="hint">{hint}</p>
             <dl className="at">
-              {c && <><dt>Cloud</dt><dd>low {c.low}% · mid {c.mid}% · high {c.high}%</dd></>}
+              <dt>Cloud</dt><dd>{c ? `low ${c.low}% · mid ${c.mid}% · high ${c.high}%` : '–'}</dd>
               <dt>Sun</dt><dd>{sun.alt > 0 ? `${Math.round(sun.alt)}° up` : 'below the horizon'}</dd>
               <dt>Moon</dt><dd>{phaseName(ph.phase)}, {Math.round(ph.lit * 100)}% lit</dd>
             </dl>

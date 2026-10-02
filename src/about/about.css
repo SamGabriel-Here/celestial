@@ -18,6 +18,7 @@ body.about { overflow-x: clip; }
 /* ---------- chrome: the app's header, fixed, its tabs jumping to the acts ---------- */
 .about-top { position: fixed; z-index: 60; inset: 0 0 auto; height: var(--hdr); padding-block: 0;
   background: var(--card); border-bottom: 1px solid var(--line-soft); }
+.tabs .absent { visibility: hidden; }
 .open-link { justify-self: end; padding: 7px 16px; border: 1px solid var(--print); border-radius: 999px;
   font: 500 14px/1.2 var(--sans); text-decoration: none; transition: background-color 160ms ease-out, color 160ms ease-out; }
 .open-link:hover { background: var(--print); color: var(--card-deep); }
@@ -31,7 +32,9 @@ body.about { overflow-x: clip; }
 .day-stage .reading > * { animation: none; }
 .day-stage .temp { margin-top: 14px; }
 .guess { margin-top: 20px; max-width: 30ch; }
-.forecast-state { margin-top: 18px; display: grid; gap: 12px; justify-items: start; max-width: 30ch; font-size: 16px; line-height: 1.45; }
+.temp.pending { color: var(--line); } /* a reading not yet in */
+.cond.quiet { font-weight: 400; font-size: 16px; }
+.forecast-state { margin-top: 4px; display: grid; gap: 12px; justify-items: start; max-width: 30ch; font-size: 16px; line-height: 1.45; }
 .hint { font-size: 16px; line-height: 1.5; max-width: 34ch; min-height: 9em; margin-bottom: 14px; }
 
 /* ---------- 2 · sixteen days ---------- */
@@ -101,7 +104,7 @@ body.about { overflow-x: clip; }
   .day-stage .forecast-state { grid-column: 1 / -1; margin-top: 6px; max-width: none; font-size: 15px; }
   .day-stage .details { width: 100%; }
   .day-stage .details h2, .day-stage .details .at { display: none; }
-  .hint { min-height: 0; max-width: none; font-size: 15px; margin: 0; }
+  .hint { min-height: 9em; max-width: none; font-size: 15px; margin: 0; } /* reserved: the hint changes as the wheel turns */
   .how-wrap { grid-template-columns: 1fr; justify-items: start; }
   .moon { width: min(60vw, 16rem); }
   .close-ring { width: 150vw; right: -75vw; }
