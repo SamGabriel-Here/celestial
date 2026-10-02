@@ -1,6 +1,12 @@
 // The landing page's two small decisions: whose sky to show, and which moment the scroll has reached.
 
-const ALIAS: Record<string, string> = { Calcutta: 'Kolkata', Saigon: 'Ho Chi Minh City', Kiev: 'Kyiv', Rangoon: 'Yangon', Katmandu: 'Kathmandu' };
+// Older zone names browsers still report, and zones since merged into a neighbour, by the city now on the map.
+const ALIAS: Record<string, string> = {
+  Calcutta: 'Kolkata', Saigon: 'Ho Chi Minh', Kiev: 'Kyiv', Rangoon: 'Yangon', Katmandu: 'Kathmandu', Asmera: 'Asmara',
+  Godthab: 'Nuuk', Faeroe: 'Faroe', Ponape: 'Pohnpei', Truk: 'Chuuk', Enderbury: 'Kanton', 'Coral Harbour': 'Atikokan',
+  'Santa Isabel': 'Tijuana', Nipigon: 'Toronto', 'Thunder Bay': 'Toronto', 'Rainy River': 'Winnipeg', Pangnirtung: 'Iqaluit',
+  Yellowknife: 'Edmonton', Choibalsan: 'Ulaanbaatar', Currie: 'Hobart', Uzhgorod: 'Kyiv', Zaporozhye: 'Kyiv', Johnston: 'Honolulu',
+};
 
 /** The city a time zone is named after ("America/New_York" → "New York"); none for "UTC" or "Etc/…". */
 export function zoneCity(zone: string | undefined): string | undefined {

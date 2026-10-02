@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { HOLD, skyTime, zoneCity } from '../src/about/model';
+import { ZONES } from '../src/about/zones';
 
 describe('zoneCity', () => {
   it('reads the city a zone is named after', () => {
     expect(zoneCity('America/New_York')).toBe('New York');
     expect(zoneCity('America/Argentina/Buenos_Aires')).toBe('Buenos Aires');
     expect(zoneCity('Asia/Calcutta')).toBe('Kolkata');
+  });
+  it('places every time zone a browser can report without asking the network', () => {
+    const missing = Intl.supportedValuesOf('timeZone').filter((z) => { const c = zoneCity(z); return c && !ZONES[c]; });
+    expect(missing).toEqual([]);
   });
   it('has no city for UTC-style zones', () => {
     expect(zoneCity('UTC')).toBeUndefined();

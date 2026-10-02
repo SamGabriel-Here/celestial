@@ -22,7 +22,6 @@ body.about { overflow-x: clip; }
   font: 500 14px/1.2 var(--sans); text-decoration: none; transition: background-color 160ms ease-out, color 160ms ease-out; }
 .open-link:hover { background: var(--print); color: var(--card-deep); }
 .open-link:active { transform: translateY(1px); }
-.about-wait { min-height: 100svh; display: grid; place-items: center; padding: var(--hdr) var(--pad) 0; }
 
 /* ---------- 1 · the day turns ---------- */
 .day-stage { display: grid; grid-template-columns: minmax(240px, 1fr) auto minmax(240px, 1fr); align-items: center;
@@ -32,6 +31,7 @@ body.about { overflow-x: clip; }
 .day-stage .reading > * { animation: none; }
 .day-stage .temp { margin-top: 14px; }
 .guess { margin-top: 20px; max-width: 30ch; }
+.forecast-state { margin-top: 18px; display: grid; gap: 12px; justify-items: start; max-width: 30ch; font-size: 16px; line-height: 1.45; }
 .hint { font-size: 16px; line-height: 1.5; max-width: 34ch; min-height: 9em; margin-bottom: 14px; }
 
 /* ---------- 2 · sixteen days ---------- */
@@ -98,6 +98,7 @@ body.about { overflow-x: clip; }
   .day-stage .temp { grid-column: 2; grid-row: 1 / span 3; align-self: center; font-size: 64px; margin: 0; }
   .day-stage .cond, .day-stage .feels { grid-column: 1; font-size: 15px; }
   .day-stage .guess { display: none; }
+  .day-stage .forecast-state { grid-column: 1 / -1; margin-top: 6px; max-width: none; font-size: 15px; }
   .day-stage .details { width: 100%; }
   .day-stage .details h2, .day-stage .details .at { display: none; }
   .hint { min-height: 0; max-width: none; font-size: 15px; margin: 0; }
