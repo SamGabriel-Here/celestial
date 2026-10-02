@@ -75,9 +75,9 @@ body.about { overflow-x: clip; }
   stroke: var(--line-soft); stroke-width: 1.5; pointer-events: none; }
 .close-ring line { stroke: var(--line); }
 .close-inner { position: relative; display: grid; gap: 26px; width: 100%; max-width: 34rem; min-width: 0; }
-.close-inner h2.close-q, .about .close-inner h2 { font: 300 clamp(44px, 6vw, 84px)/1 var(--sans); letter-spacing: -.02em; text-transform: none; color: var(--print); margin: 0; }
+.about .close-inner h2.close-q { font: 300 clamp(44px, 6vw, 84px)/1 var(--sans); letter-spacing: -.02em; text-transform: none; color: var(--print); margin: 0; }
 .close-form { display: flex; gap: 12px; border-bottom: 1px solid var(--print-2); }
-.close-form:focus-within { border-bottom-color: var(--sun); }
+.close-form:focus-within { border-bottom-color: var(--sun); box-shadow: 0 1px 0 var(--sun); } /* a 2px line: the field's focus ring */
 .close-form input { flex: 1; min-width: 0; background: none; border: 0; padding: 10px 2px; font-size: 22px; color: var(--print); }
 .close-form input::placeholder { color: var(--print-2); }
 .close-form input:focus-visible { outline: none; }
@@ -100,7 +100,7 @@ body.about { overflow-x: clip; }
   .day-stage .reading .when { grid-column: 1; }
   .day-stage .temp { grid-column: 2; grid-row: 1 / span 3; align-self: center; font-size: 64px; margin: 0; }
   .day-stage .cond, .day-stage .feels { grid-column: 1; font-size: 15px; }
-  .day-stage .guess { display: none; }
+  .day-stage .guess { grid-column: 1 / -1; margin-top: 4px; max-width: none; }
   .day-stage .forecast-state { grid-column: 1 / -1; margin-top: 6px; max-width: none; font-size: 15px; }
   .day-stage .details { width: 100%; }
   .day-stage .details h2, .day-stage .details .at, .ranges { display: none; }

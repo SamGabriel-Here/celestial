@@ -32,6 +32,12 @@ function choosePlace(): Pick {
   return { place: LONDON, why: 'default', zone: 'Europe/London' };
 }
 
+/** Jump to the place field at the end of the tour and put the cursor in it. */
+const changePlace = () => {
+  document.getElementById('open')?.scrollIntoView({ block: 'end' });
+  document.getElementById('q')?.focus({ preventScroll: true });
+};
+
 const appUrl = (p: Place) => buildUrl({ q: p.name, at: { lat: p.lat, lon: p.lon }, view: 'now', t: 0 });
 
 export function About() {
@@ -66,7 +72,7 @@ export function About() {
         <a className="open-link" href={open}>Open the sky</a>
       </header>
       <main>
-        <DayAct f={f} pick={pick} status={status} unit={unit} open={open} retry={() => setAttempt((n) => n + 1)} />
+        <DayAct f={f} pick={pick} status={status} unit={unit} retry={() => setAttempt((n) => n + 1)} />
         {f && <DaysAct f={f} place={place} unit={unit} />}
         <HowAct place={place} />
         <CloseAct place={place} open={open} />
@@ -99,7 +105,7 @@ function useStep(ref: RefObject<HTMLElement | null>, time: (p: number) => number
   return step;
 }
 
-function DayAct({ f, pick, status, unit, open, retry }: { f?: Forecast; pick: Pick; status: Status; unit: Unit; open: string; retry(): void }) {
+function DayAct({ f, pick, status, unit, retry }: { f?: Forecast; pick: Pick; status: Status; unit: Unit; retry(): void }) {
   const { place, why } = pick;
   const ref = useRef<HTMLElement>(null);
   const now = useMemo(() => Date.now(), []);
@@ -137,7 +143,7 @@ function DayAct({ f, pick, status, unit, open, retry }: { f?: Forecast; pick: Pi
   const ahead = mins < 1 ? 'now' : mins < 60 ? `in ${mins} min` : `in ${Math.round(mins / 60)} h`;
   const at = iso ? clockLabel(iso) : ahead;
   const hint = step === 0
-    ? `This is Celestial, running. It is the real sky over ${place.name} at this minute: the sun, the moon and the 45 brightest stars, computed in your browser${f ? ', with three decks of cloud from the live forecast' : ''}.`
+    ? `This is Celestial, running. It is the real sky over ${place.name} at this minute: the sun, the moon and the 45 brightest stars, computed in your browser${f ? ', with cloud at three heights from the live forecast' : ''}.`
     : sun.alt > 0 ? `The sun is ${Math.round(sun.alt)}° up.${f ? ` Every hour on the rim is the live forecast for ${place.name}.` : ''}`
     : sun.alt > -6 ? 'Twilight: the sun has just gone below the horizon.'
     : `Night. These are the stars above ${place.name}${iso ? ` at ${at}` : ''}, where they really are${cloud > 60 ? `, dimmed by ${cloud}% cloud` : ''}.`;
@@ -167,8 +173,8 @@ function DayAct({ f, pick, status, unit, open, retry }: { f?: Forecast; pick: Pi
             </>
           )}
           <p className="guess small quiet">
-            {why === 'last' ? 'The last place you opened.' : why === 'zone' ? 'Guessed from your time zone.' : 'London, until you choose a place.'}{' '}
-            <a href={open}>Open it in Celestial</a>
+            {why === 'last' ? 'The last place you opened' : why === 'zone' ? 'Guessed from your time zone' : 'London, until you choose a place'}
+            {' · '}<a href="#open" onClick={(e) => { e.preventDefault(); changePlace(); }}>Change</a>
           </p>
         </div>
         <div className="dial-col">
@@ -291,9 +297,9 @@ function HowAct({ place }: { place: Place }) {
           <figcaption>Tonight: {phaseName(ph.phase).toLowerCase()}, {Math.round(ph.lit * 100)}% lit. Full moon on {weekday(fullIso)} {Number(fullIso.slice(8, 10))}.</figcaption>
         </figure>
         <div className="how-text">
-          <h2>Where it comes from</h2>
+          <h2>How it works</h2>
           <p>Forecasts come from Open-Meteo, fetched straight from your browser. No account, no key, and nothing kept about you except the places you save, on this device.</p>
-          <p>The sky is computed, not painted: the sun and moon from published astronomical formulas, the 45 brightest stars at their real coordinates, cloud laid in three decks from the forecast.</p>
+          <p>The sky is computed, not painted: the sun and moon from published astronomical formulas, the 45 brightest stars at their real coordinates, cloud laid at three heights from the forecast.</p>
           <p>It installs like an app and keeps the last forecast for when you are offline. Radar shows the last two hours of rain; Air &amp; sky has air quality and the coming lunar month.</p>
         </div>
       </div>
@@ -316,13 +322,13 @@ function CloseAct({ place, open }: { place: Place; open: string }) {
           })}
         </svg>
         <div className="close-inner">
-          <h2>Where's your sky?</h2>
+          <h2 className="close-q">Where's your sky?</h2>
           <form className="close-form" action="/" method="get">
             <label className="sr" htmlFor="q">A place</label>
             <input id="q" name="q" required placeholder="Any city or town" autoComplete="off" />
             <button type="submit">Open the sky</button>
           </form>
-          <p>Or <a href={open}>open {place.name} as it is now</a>.</p>
+          <p>Or <a href={open}>open the sky over {place.name}</a>.</p>
         </div>
         <footer className="foot small quiet">
           Forecasts by <a href="https://open-meteo.com/">Open-Meteo</a> · <a href="https://github.com/SamGabriel-Here/celestial">Source on GitHub</a>
