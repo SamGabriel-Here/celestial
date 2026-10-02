@@ -137,7 +137,7 @@ function DayAct({ f, pick, status, unit, open, retry }: { f?: Forecast; pick: Pi
   const ahead = mins < 1 ? 'now' : mins < 60 ? `in ${mins} min` : `in ${Math.round(mins / 60)} h`;
   const at = iso ? clockLabel(iso) : ahead;
   const hint = step === 0
-    ? `This is Celestial, running. It is the real sky over ${place.name} at this minute: the sun, the moon and the 45 brightest stars, computed in your browser${f ? ', with three decks of cloud from the live forecast' : ''}. Scroll to turn the wheel through the next 24 hours.`
+    ? `This is Celestial, running. It is the real sky over ${place.name} at this minute: the sun, the moon and the 45 brightest stars, computed in your browser${f ? ', with three decks of cloud from the live forecast' : ''}.`
     : sun.alt > 0 ? `The sun is ${Math.round(sun.alt)}° up.${f ? ` Every hour on the rim is the live forecast for ${place.name}.` : ''}`
     : sun.alt > -6 ? 'Twilight: the sun has just gone below the horizon.'
     : `Night. These are the stars above ${place.name}${iso ? ` at ${at}` : ''}, where they really are${cloud > 60 ? `, dimmed by ${cloud}% cloud` : ''}.`;
@@ -171,12 +171,16 @@ function DayAct({ f, pick, status, unit, open, retry }: { f?: Forecast; pick: Pi
             <a href={open}>Open it in Celestial</a>
           </p>
         </div>
-        <div className="dial-col" inert>
+        <div className="dial-col">
+          <div inert>
           <Dial segments={segments} index={i} onIndex={() => {}} turnMs={420} label="The next 24 hours"
             valueText={c ? `${at}, ${weatherWords(c.code)}` : at} glow={skyColour(sun.alt, cloud).horizon}>
             <SkyWindow ms={ms} lat={place.lat} lon={place.lon} low={c?.low ?? 0} mid={c?.mid ?? 0} high={c?.high ?? 0} mm={c?.mm ?? 0}
               label={`The sky over ${place.name} ${iso ? `at ${at}` : ahead}${c ? `: ${weatherWords(c.code)}, ${cloud}% cloud` : ''}`} />
           </Dial>
+          </div>
+          {/* The one instruction, under the wheel it is about; it steps back once the wheel has turned. */}
+          <p className={`dial-hint${step ? ' done' : ''}`}>Scroll to turn the wheel through the next 24 hours</p>
         </div>
         <aside className="details">
           <section>
@@ -226,17 +230,20 @@ function DaysAct({ f, place, unit }: { f: Forecast; place: Place; unit: Unit }) 
           <p className="cond">{capitalise(weatherWords(c.code))}</p>
           <p className="feels num">{c.mm >= 0.1 ? `${c.mm.toFixed(1)} mm` : 'Dry'}{c.pop != null ? ` · ${c.pop}% rain` : ''} · UV {c.uv != null ? Math.round(c.uv) : '–'}</p>
         </div>
-        <div className="dial-col" inert>
+        <div className="dial-col">
+          <div inert>
           <Dial segments={segments} index={i} onIndex={() => {}} turnMs={420} label="The next sixteen days"
             valueText={`${name(c.iso, i)}: ${weatherWords(c.code)}`} glow={skyColour(c.sunAlt, cloud).horizon}>
             <SkyWindow ms={c.startMs} lat={place.lat} lon={place.lon} low={c.low} mid={c.mid} high={c.high} mm={c.mm / 24}
               label={`Noon over ${place.name} on ${name(c.iso, i)}: ${weatherWords(c.code)}`} />
           </Dial>
+          </div>
+          <p className={`dial-hint${i ? ' done' : ''}`}>Scroll to turn the wheel a day at a time</p>
         </div>
         <aside className="details">
           <section>
             <h2>Sixteen days</h2>
-            <p className="hint">Noon over {place.name} on each of the next sixteen days. Scroll to turn the wheel a day at a time.</p>
+            <p className="hint">Noon over {place.name} on each of the next sixteen days.</p>
             <ol className="ranges" aria-label="Low and high for each day, on one scale">
               {cols.map((d, k) => (
                 <li key={d.iso} className={k === i ? 'sel' : undefined}>

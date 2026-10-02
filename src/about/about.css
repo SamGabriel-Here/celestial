@@ -35,6 +35,8 @@ body.about { overflow-x: clip; }
 .temp.pending { color: var(--line); } /* a reading not yet in */
 .cond.quiet { font-weight: 400; font-size: 16px; }
 .forecast-state { margin-top: 4px; display: grid; gap: 12px; justify-items: start; max-width: 30ch; font-size: 16px; line-height: 1.45; }
+.day-stage .dial-hint { font-size: 14px; color: var(--print); transition: opacity 400ms var(--ease); }
+.day-stage .dial-hint.done { opacity: 0; }
 .hint { font-size: 16px; line-height: 1.5; max-width: 34ch; min-height: 9em; margin-bottom: 14px; }
 
 /* ---------- 2 · sixteen days: the same instrument, a day per step ---------- */
@@ -111,7 +113,7 @@ body.about { overflow-x: clip; }
   .close-form button { letter-spacing: .12em; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .open-link, .close-form button { transition: none; }
+  .open-link, .close-form button, .day-stage .dial-hint { transition: none; }
   .moon { clip-path: none; transition: none; }
   .how-text > * { transform: none; transition: opacity 220ms ease-out; }
 }
