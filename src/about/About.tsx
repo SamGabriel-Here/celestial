@@ -10,12 +10,12 @@ import { skyColour } from '../lib/sky';
 import type { Forecast, Place } from '../lib/types';
 import { capitalise, clockLabel, fmtTemp, weatherWords, weekday, zonedIso, type Unit } from '../lib/units';
 import { buildUrl } from '../lib/url';
-import { hoursAt, zoneCity } from './model';
+import { skyTime, zoneCity } from './model';
 
 type Why = 'last' | 'zone' | 'default';
 const LONDON: Place = { id: placeId(51.5085, -0.1257), name: 'London', country: 'United Kingdom', lat: 51.5085, lon: -0.1257 };
 const HOUR = 3600e3;
-const STEP = 600e3; // the window's sky is recomputed every ten minutes of the turn
+const STEP = 120e3; // the window's sky is recomputed every two minutes of the turn, so dusk moves smoothly
 
 /** Whose sky: the place last opened in the app, else the city the time zone is named after, else London. */
 async function choosePlace(): Promise<{ place: Place; why: Why }> {
@@ -88,19 +88,19 @@ function useProgress(ref: RefObject<HTMLElement | null>, onProgress: (p: number)
   }, [ref, onProgress]);
 }
 
-/** The wheel's moment in whole ten-minute steps, so React renders only when the moment changes. */
-function useStep(ref: RefObject<HTMLElement | null>): number {
+/** The wheel's moment in whole two-minute steps, so React renders only when the moment changes. */
+function useStep(ref: RefObject<HTMLElement | null>, time: (p: number) => number): number {
   const [step, setStep] = useState(0);
-  useProgress(ref, useCallback((p: number) => setStep(toStep(p)), []));
+  useProgress(ref, useCallback((p: number) => setStep(Math.round((time(p) * HOUR) / STEP)), [time]));
   return step;
 }
 
-const toStep = (p: number) => Math.round((hoursAt(p) * HOUR) / STEP);
-
 function DayAct({ f, place, why, unit, open }: { f: Forecast; place: Place; why: Why; unit: Unit; open: string }) {
   const ref = useRef<HTMLElement>(null);
-  const step = useStep(ref);
   const now = useMemo(() => Date.now(), []);
+  // Scroll moves through the sky's own time: dusk is slowed to fill the middle of the act.
+  const time = useMemo(() => skyTime((h) => sunPosition(now + h * HOUR, place.lat, place.lon).alt), [now, place]);
+  const step = useStep(ref, time);
   const cols = useMemo(() => hourColumns(f, now, 24), [f, now]);
   const segments = useMemo<Segment[]>(() => {
     const maxMm = Math.max(1, ...cols.map((x) => x.mm));
@@ -119,7 +119,8 @@ function DayAct({ f, place, why, unit, open }: { f: Forecast; place: Place; why:
   const sun = sunPosition(ms, place.lat, place.lon);
   const cloud = Math.max(c.low, c.mid, c.high);
   const ph = moonPhase(ms);
-  const ahead = Math.round((ms - now) / HOUR);
+  const mins = Math.round((ms - now) / 60e3);
+  const ahead = mins < 1 ? 'now' : mins < 60 ? `in ${mins} min` : `in ${Math.round(mins / 60)} h`;
   const hint = step === 0
     ? `This is Celestial, running. It is the real sky over ${place.name} at this minute: the sun, the moon, the 45 brightest stars and three decks of cloud, from the live forecast. Scroll to turn the wheel through the next 24 hours.`
     : sun.alt > 0 ? `The sun is ${Math.round(sun.alt)}° up. Every hour on the rim is the live forecast for ${place.name}.`
@@ -131,7 +132,7 @@ function DayAct({ f, place, why, unit, open }: { f: Forecast; place: Place; why:
       <div className="day-stage">
         <div className="reading">
           <h1>{place.name}{place.country ? <span>, {place.country}</span> : null}</h1>
-          <p className="when num">{weekday(iso)} · {clockLabel(iso)} local · {ahead ? `in ${ahead} h` : 'now'}</p>
+          <p className="when num">{weekday(iso)} · {clockLabel(iso)} local · {ahead}</p>
           <p className="temp">{fmtTemp(i === 0 ? f.current.temp : c.temp, unit)}</p>
           <p className="cond">{capitalise(weatherWords(c.code))}</p>
           <p className="feels">{c.pop ?? 0}% chance of rain{c.mm >= 0.1 ? `, ${c.mm.toFixed(1)} mm` : ''}</p>
