@@ -25,6 +25,19 @@ const paintedColours = (page) => page.evaluate(() => {
   return seen.size;
 });
 
+// Every asset a script asks for must be in the build. A preview server answers a missing file with the app's
+// HTML, so only this check catches it; the live host returns 404 and the view that needed it never opens.
+{
+  const { readdirSync, readFileSync, existsSync } = await import('node:fs');
+  const missing = new Set();
+  for (const f of readdirSync('dist/assets').filter((n) => n.endsWith('.js'))) {
+    for (const [ref] of readFileSync(`dist/assets/${f}`, 'utf8').matchAll(/assets\/[\w.-]+\.(?:css|js)/g)) {
+      if (!existsSync(`dist/${ref}`)) missing.add(ref);
+    }
+  }
+  if (missing.size) fail(`build: scripts reference missing files ${[...missing].join(', ')}`); else ok('build: every referenced asset exists');
+}
+
 const browser = await chromium.launch({ channel: 'chrome' });
 try {
   for (const [name, viewport] of Object.entries(VIEWPORTS)) {

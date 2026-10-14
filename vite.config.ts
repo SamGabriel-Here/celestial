@@ -11,8 +11,8 @@ const inlineCss = (): Plugin => ({
   apply: 'build',
   enforce: 'post',
   generateBundle(_, bundle) {
-    // Every page inlines its own stylesheets; a sheet shared by two pages is dropped only after both have it.
-    const inlined = new Set<string>();
+    // Every page inlines its stylesheets. The files stay in the build: lazily loaded views (Radar, Air)
+    // request the same shared sheet when they open, and a missing one stops them loading.
     for (const html of Object.values(bundle)) {
       if (html.type !== 'asset' || !html.fileName.endsWith('.html')) continue;
       let source = String(html.source);
@@ -20,11 +20,9 @@ const inlineCss = (): Plugin => ({
         if (chunk.type !== 'asset' || !name.endsWith('.css') || !source.includes(name)) continue;
         const tag = new RegExp(`<link rel="stylesheet"[^>]*href="/${name.replace(/[.]/g, '\\.')}"[^>]*>`);
         source = source.replace(tag, `<style>${String(chunk.source)}</style>`);
-        inlined.add(name);
       }
       html.source = source;
     }
-    for (const name of inlined) delete bundle[name];
   },
 });
 
